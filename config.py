@@ -1,0 +1,259 @@
+"""
+Configuration file management.
+
+Handles reading/writing of history, tab groups, and app settings
+to a JSON file. File location is OS-dependent.
+"""
+
+from __future__ import annotations
+
+import json
+import logging
+import os
+import platform
+import sys
+from dataclasses import dataclass, field
+from datetime import datetime
+from pathlib import Path
+from typing import Final
+
+log = logging.getLogger(__name__)
+
+HISTORY_MAX: Final[int] = 50
+
+
+def get_config_path() -> Path:
+    """Return the OS-specific configuration file path."""
+    system = platform.system()
+    if system == "Darwin":
+        return Path.home() / ".file_tab_opener.json"
+    elif system == "Windows":
+        appdata = os.environ.get("APPDATA", "")
+        if appdata:
+            return Path(appdata) / "FileTabOpener" / "config.json"
+        return Path.home() / "FileTabOpener" / "config.json"
+    else:
+        # Linux, etc.
+        return Path.home() / ".config" / "file_tab_opener" / "config.json"
+
+
+@dataclass
+class HistoryEntry:
+    """A single history entry with path, pin state, and usage tracking."""
+
+    path: str
+    pinned: bool = False
+    last_used: str = ""
+    use_count: int = 0
+
+    def touch(self) -> None:
+        """Update the last-used timestamp and increment the use count."""
+        self.last_used = datetime.now().isoformat(timespec="seconds")
+        self.use_count += 1
+
+
+@dataclass
+class TabGroup:
+    """A named group of folder paths."""
+
+    name: str
+    paths: list[str] = field(default_factory=list)
+
+
+@dataclass
+class AppConfig:
+    """Application-wide configuration data."""
+
+    history: list[HistoryEntry] = field(default_factory=list)
+    tab_groups: list[TabGroup] = field(default_factory=list)
+    window_geometry: str = "800x600"
+    settings: dict[str, object] = field(default_factory=lambda: {"use_custom_tk": True})
+
+
+class ConfigManager:
+    """Manages configuration read/write and history/tab-group operations."""
+
+    def __init__(self) -> None:
+        self.path: Path = get_config_path()
+        self.data: AppConfig = AppConfig()
+
+    def load(self) -> None:
+        """Load configuration from file. Use defaults if the file is missing or corrupt."""
+        if not self.path.exists():
+            return
+        try:
+            text = self.path.read_text(encoding="utf-8")
+            d = json.loads(text)
+            self.data = self._from_dict(d)
+        except (json.JSONDecodeError, KeyError, TypeError, ValueError) as e:
+            log.warning("Config file is corrupt, using defaults: %s", e)
+            self.data = AppConfig()
+
+    def save(self) -> None:
+        """Write configuration to file. Creates parent directories if needed."""
+        self.path.parent.mkdir(parents=True, exist_ok=True)
+        d = self._to_dict()
+        text = json.dumps(d, ensure_ascii=False, indent=2)
+        self.path.write_text(text, encoding="utf-8")
+
+    def _to_dict(self) -> dict[str, object]:
+        """Serialize AppConfig to a dictionary."""
+        return {
+            "history": [
+                {
+                    "path": e.path,
+                    "pinned": e.pinned,
+                    "last_used": e.last_used,
+                    "use_count": e.use_count,
+                }
+                for e in self.data.history
+            ],
+            "tab_groups": [
+                {"name": g.name, "paths": list(g.paths)}
+                for g in self.data.tab_groups
+            ],
+            "window_geometry": self.data.window_geometry,
+            "settings": dict(self.data.settings),
+        }
+
+    @staticmethod
+    def _from_dict(d: dict[str, object]) -> AppConfig:
+        """Deserialize a dictionary into AppConfig. Handles missing keys gracefully."""
+        history: list[HistoryEntry] = []
+        for item in d.get("history", []):
+            history.append(HistoryEntry(
+                path=item.get("path", ""),
+                pinned=item.get("pinned", False),
+                last_used=item.get("last_used", ""),
+                use_count=item.get("use_count", 0),
+            ))
+
+        tab_groups: list[TabGroup] = []
+        for item in d.get("tab_groups", []):
+            # Compatibility: accept "folders" key as an alias for "paths"
+            paths = item.get("paths", item.get("folders", []))
+            tab_groups.append(TabGroup(
+                name=item.get("name", ""),
+                paths=list(paths),
+            ))
+
+        return AppConfig(
+            history=history,
+            tab_groups=tab_groups,
+            window_geometry=d.get("window_geometry", "800x600"),
+            settings=d.get("settings", {"use_custom_tk": True}),
+        )
+
+    # --- History operations ---
+
+    def add_history(self, path: str) -> None:
+        """Add a path to history. Updates existing entry or appends a new one."""
+        clean = path.strip()
+        if clean.startswith('"') and clean.endswith('"') and len(clean) >= 2:
+            clean = clean[1:-1]
+        normalized = os.path.normpath(clean)
+        for entry in self.data.history:
+            if os.path.normpath(entry.path) == normalized:
+                entry.touch()
+                return
+        new_entry = HistoryEntry(path=normalized)
+        new_entry.touch()
+        self.data.history.append(new_entry)
+        self._trim_history()
+
+    def remove_history(self, path: str) -> None:
+        """Remove a path from history."""
+        normalized = os.path.normpath(path)
+        self.data.history = [
+            e for e in self.data.history
+            if os.path.normpath(e.path) != normalized
+        ]
+
+    def clear_history(self, *, keep_pinned: bool = True) -> None:
+        """Clear history. If keep_pinned is True, pinned entries are preserved."""
+        if keep_pinned:
+            self.data.history = [e for e in self.data.history if e.pinned]
+        else:
+            self.data.history.clear()
+
+    def toggle_pin(self, path: str) -> None:
+        """Toggle the pinned state of a history entry."""
+        normalized = os.path.normpath(path)
+        for entry in self.data.history:
+            if os.path.normpath(entry.path) == normalized:
+                entry.pinned = not entry.pinned
+                return
+
+    def get_sorted_history(self) -> list[HistoryEntry]:
+        """Return history sorted with pinned first, each group by most recent."""
+        pinned = sorted(
+            [e for e in self.data.history if e.pinned],
+            key=lambda e: e.last_used,
+            reverse=True,
+        )
+        unpinned = sorted(
+            [e for e in self.data.history if not e.pinned],
+            key=lambda e: e.last_used,
+            reverse=True,
+        )
+        return pinned + unpinned
+
+    def _trim_history(self) -> None:
+        """Remove the oldest unpinned entries when history exceeds HISTORY_MAX."""
+        while len(self.data.history) > HISTORY_MAX:
+            oldest_idx: int | None = None
+            oldest_time: str | None = None
+            for i, entry in enumerate(self.data.history):
+                if not entry.pinned:
+                    if oldest_time is None or entry.last_used < oldest_time:
+                        oldest_time = entry.last_used
+                        oldest_idx = i
+            if oldest_idx is not None:
+                self.data.history.pop(oldest_idx)
+            else:
+                break  # All entries are pinned
+
+    # --- Tab group operations ---
+
+    def add_tab_group(self, name: str) -> TabGroup:
+        """Create a new empty tab group."""
+        group = TabGroup(name=name)
+        self.data.tab_groups.append(group)
+        return group
+
+    def delete_tab_group(self, name: str) -> None:
+        """Delete a tab group by name."""
+        self.data.tab_groups = [g for g in self.data.tab_groups if g.name != name]
+
+    def rename_tab_group(self, old_name: str, new_name: str) -> None:
+        """Rename a tab group."""
+        for group in self.data.tab_groups:
+            if group.name == old_name:
+                group.name = new_name
+                return
+
+    def get_tab_group(self, name: str) -> TabGroup | None:
+        """Get a tab group by name. Returns None if not found."""
+        for group in self.data.tab_groups:
+            if group.name == name:
+                return group
+        return None
+
+    def add_path_to_group(self, group_name: str, path: str) -> None:
+        """Add a path to a tab group."""
+        group = self.get_tab_group(group_name)
+        if group:
+            group.paths.append(os.path.normpath(path))
+
+    def remove_path_from_group(self, group_name: str, index: int) -> None:
+        """Remove a path from a tab group by index."""
+        group = self.get_tab_group(group_name)
+        if group and 0 <= index < len(group.paths):
+            group.paths.pop(index)
+
+    def move_path_in_group(self, group_name: str, old_index: int, new_index: int) -> None:
+        """Reorder a path within a tab group."""
+        group = self.get_tab_group(group_name)
+        if group and 0 <= old_index < len(group.paths) and 0 <= new_index < len(group.paths):
+            item = group.paths.pop(old_index)
+            group.paths.insert(new_index, item)

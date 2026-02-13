@@ -6,17 +6,12 @@ fallback behavior, and key completeness.
 
 from __future__ import annotations
 
-import sys
-from pathlib import Path
 from unittest import mock
 
 import pytest
 
-# Add project root to sys.path for imports
-sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
-
-import i18n
-from i18n import LANG_EN, LANG_JA, _STRINGS
+from file_tab_opener import i18n
+from file_tab_opener.i18n import LANG_EN, LANG_JA, _STRINGS
 
 
 # ============================================================

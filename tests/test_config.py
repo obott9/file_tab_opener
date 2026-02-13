@@ -8,15 +8,11 @@ from __future__ import annotations
 
 import json
 import os
-import sys
 from pathlib import Path
 
 import pytest
 
-# Add project root to sys.path for imports
-sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
-
-from config import AppConfig, ConfigManager, HistoryEntry, TabGroup, HISTORY_MAX
+from file_tab_opener.config import AppConfig, ConfigManager, HistoryEntry, TabGroup, HISTORY_MAX
 
 
 # ============================================================

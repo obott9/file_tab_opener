@@ -25,21 +25,32 @@ Instead of opening folders one by one, register them in a named tab group and op
 ```bash
 git clone https://github.com/obott9/file_tab_opener.git
 cd file_tab_opener
-pip install -r requirements.txt
+pip install .
 ```
 
-### Dependencies
+With all optional dependencies (recommended):
 
-| Package | Purpose | Required |
-|---------|---------|----------|
-| customtkinter | Modern themed GUI | Optional (tkinter fallback) |
-| pywinauto | Reliable Explorer tab automation (Windows) | Optional (ctypes fallback) |
-| setuptools | Required by customtkinter on Python 3.12+ | With customtkinter |
+```bash
+pip install .[all]
+```
+
+### Optional Dependencies
+
+| Package | Purpose | Install |
+|---------|---------|---------|
+| customtkinter | Modern themed GUI | `pip install .[ui]` |
+| pywinauto | Reliable Explorer tab automation (Windows) | `pip install .[windows]` |
 
 ## Usage
 
 ```bash
-python file_tab_opener.py
+file-tab-opener
+```
+
+Or run as a Python module:
+
+```bash
+python -m file_tab_opener
 ```
 
 ### Quick Start
@@ -85,10 +96,13 @@ Settings are stored in a JSON file:
 | macOS | `~/.file_tab_opener.json` |
 | Linux | `~/.config/file_tab_opener/config.json` |
 
-## Testing
+## Development
 
 ```bash
-pip install pytest
+# Install with dev dependencies (editable mode)
+pip install -e .[all,dev]
+
+# Run tests
 pytest tests/ -v
 ```
 
@@ -96,19 +110,21 @@ pytest tests/ -v
 
 ```
 file_tab_opener/
-├── file_tab_opener.py   # Entry point
-├── gui.py               # GUI (customtkinter / tkinter)
-├── config.py            # Configuration management
-├── i18n.py              # Internationalization (EN/JA)
-├── opener_win.py        # Windows Explorer tab opener
-├── opener_mac.py        # macOS Finder tab opener
-├── requirements.txt     # Dependencies
-├── LICENSE              # MIT License
-├── README.md            # This file
-├── README_ja.md         # Japanese README
+├── pyproject.toml           # Package configuration
+├── LICENSE                  # MIT License
+├── README.md                # This file
+├── README_ja.md             # Japanese README
+├── file_tab_opener/         # Source package
+│   ├── __init__.py
+│   ├── __main__.py          # Entry point
+│   ├── config.py            # Configuration management
+│   ├── i18n.py              # Internationalization (EN/JA)
+│   ├── gui.py               # GUI (customtkinter / tkinter)
+│   ├── opener_win.py        # Windows Explorer tab opener
+│   └── opener_mac.py        # macOS Finder tab opener
 └── tests/
-    ├── test_config.py   # Config module tests
-    └── test_i18n.py     # i18n module tests
+    ├── test_config.py       # Config module tests (40 tests)
+    └── test_i18n.py         # i18n module tests (18 tests)
 ```
 
 ## License

@@ -25,21 +25,32 @@
 ```bash
 git clone https://github.com/obott9/file_tab_opener.git
 cd file_tab_opener
-pip install -r requirements.txt
+pip install .
 ```
 
-### 依存パッケージ
+オプション依存を含む全機能インストール（推奨）:
 
-| パッケージ | 用途 | 必須 |
-|-----------|------|------|
-| customtkinter | モダンテーマGUI | 任意（tkinterフォールバック） |
-| pywinauto | Explorerタブ自動化（Windows） | 任意（ctypesフォールバック） |
-| setuptools | Python 3.12+でcustomtkinterに必要 | customtkinter使用時 |
+```bash
+pip install .[all]
+```
+
+### オプション依存パッケージ
+
+| パッケージ | 用途 | インストール |
+|-----------|------|------------|
+| customtkinter | モダンテーマGUI | `pip install .[ui]` |
+| pywinauto | Explorerタブ自動化（Windows） | `pip install .[windows]` |
 
 ## 使い方
 
 ```bash
-python file_tab_opener.py
+file-tab-opener
+```
+
+Pythonモジュールとして実行:
+
+```bash
+python -m file_tab_opener
 ```
 
 ### クイックスタート
@@ -85,10 +96,13 @@ python file_tab_opener.py
 | macOS | `~/.file_tab_opener.json` |
 | Linux | `~/.config/file_tab_opener/config.json` |
 
-## テスト
+## 開発
 
 ```bash
-pip install pytest
+# 開発用インストール（編集可能モード）
+pip install -e .[all,dev]
+
+# テスト実行
 pytest tests/ -v
 ```
 
@@ -96,19 +110,21 @@ pytest tests/ -v
 
 ```
 file_tab_opener/
-├── file_tab_opener.py   # エントリーポイント
-├── gui.py               # GUI（customtkinter / tkinter）
-├── config.py            # 設定ファイル管理
-├── i18n.py              # 国際化（英語/日本語）
-├── opener_win.py        # Windows Explorerタブ開き処理
-├── opener_mac.py        # macOS Finderタブ開き処理
-├── requirements.txt     # 依存パッケージ
-├── LICENSE              # MITライセンス
-├── README.md            # 英語版README
-├── README_ja.md         # このファイル
+├── pyproject.toml           # パッケージ設定
+├── LICENSE                  # MITライセンス
+├── README.md                # 英語版README
+├── README_ja.md             # このファイル
+├── file_tab_opener/         # ソースパッケージ
+│   ├── __init__.py
+│   ├── __main__.py          # エントリーポイント
+│   ├── config.py            # 設定ファイル管理
+│   ├── i18n.py              # 国際化（英語/日本語）
+│   ├── gui.py               # GUI（customtkinter / tkinter）
+│   ├── opener_win.py        # Windows Explorerタブ開き処理
+│   └── opener_mac.py        # macOS Finderタブ開き処理
 └── tests/
-    ├── test_config.py   # 設定モジュールのテスト
-    └── test_i18n.py     # i18nモジュールのテスト
+    ├── test_config.py       # 設定モジュールのテスト（40テスト）
+    └── test_i18n.py         # i18nモジュールのテスト（18テスト）
 ```
 
 ## ライセンス

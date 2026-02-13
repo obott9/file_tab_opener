@@ -2,7 +2,7 @@
 File Tab Opener -- A GUI tool for opening multiple folders as tabs
 in macOS Finder or Windows Explorer.
 
-Entry point.
+Entry point. Supports both `python -m file_tab_opener` and console_scripts.
 """
 
 from __future__ import annotations
@@ -56,10 +56,10 @@ def _get_opener() -> ModuleType:
     """Import and return the platform-specific opener module."""
     system = platform.system()
     if system == "Windows":
-        import opener_win as opener
+        from file_tab_opener import opener_win as opener
         return opener
     elif system == "Darwin":
-        import opener_mac as opener
+        from file_tab_opener import opener_mac as opener
         return opener
     else:
         print(f"Unsupported platform: {system}", file=sys.stderr)
@@ -72,12 +72,12 @@ def main() -> None:
     log = logging.getLogger(__name__)
 
     # Initialize i18n (must be before GUI construction)
-    import i18n
+    from file_tab_opener import i18n
     i18n.init()
     log.info("Language: %s", i18n.get_language())
 
     # Load configuration
-    from config import ConfigManager
+    from file_tab_opener.config import ConfigManager
 
     config = ConfigManager()
     config.load()
@@ -88,7 +88,7 @@ def main() -> None:
     log.info("Platform: %s, opener: %s", platform.system(), opener.__name__)
 
     # Build and run GUI
-    from gui import MainWindow
+    from file_tab_opener.gui import MainWindow
 
     app = MainWindow(config, opener)
     app.build()

@@ -1,0 +1,52 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "file-tab-opener"
+version = "1.0.0"
+description = "Open multiple folders as tabs in Windows Explorer or macOS Finder"
+readme = "README.md"
+license = "MIT"
+authors = [{ name = "obott9" }]
+requires-python = ">=3.10"
+dependencies = []
+
+classifiers = [
+    "Development Status :: 4 - Beta",
+    "Intended Audience :: End Users/Desktop",
+    "License :: OSI Approved :: MIT License",
+    "Operating System :: Microsoft :: Windows",
+    "Operating System :: MacOS :: MacOS X",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Programming Language :: Python :: 3.14",
+    "Topic :: Desktop Environment :: File Managers",
+]
+
+[project.optional-dependencies]
+ui = [
+    "customtkinter>=5.2.0",
+    "setuptools; python_version>='3.12'",
+]
+windows = [
+    "pywinauto>=0.6.8; sys_platform=='win32'",
+]
+all = [
+    "customtkinter>=5.2.0",
+    "setuptools; python_version>='3.12'",
+    "pywinauto>=0.6.8; sys_platform=='win32'",
+]
+dev = ["pytest>=7.0"]
+
+[project.scripts]
+file-tab-opener = "file_tab_opener.__main__:main"
+
+[project.urls]
+Repository = "https://github.com/obott9/file_tab_opener"
+
+[tool.hatch.build.targets.wheel]
+packages = ["file_tab_opener"]

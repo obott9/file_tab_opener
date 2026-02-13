@@ -16,8 +16,8 @@ from pathlib import Path
 from tkinter import filedialog, messagebox, simpledialog
 from typing import Any
 
-from config import ConfigManager
-from i18n import t
+from file_tab_opener.config import ConfigManager
+from file_tab_opener.i18n import t
 
 # --- customtkinter availability check ---
 try:

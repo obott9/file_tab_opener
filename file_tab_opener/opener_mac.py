@@ -47,6 +47,7 @@ def open_folders_as_tabs(
     paths: list[str],
     on_progress: Callable[[int, int, str], None] | None = None,
     on_error: Callable[[str, str], None] | None = None,
+    timeout: float = 30.0,
 ) -> bool:
     """
     Open multiple folders as tabs in a single Finder window.

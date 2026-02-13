@@ -202,6 +202,7 @@ def open_folders_as_tabs(
     paths: list[str],
     on_progress: Callable[[int, int, str], None] | None = None,
     on_error: Callable[[str, str], None] | None = None,
+    timeout: float = 30.0,
 ) -> bool:
     """
     Open multiple folders as tabs in a single Explorer window.
@@ -211,14 +212,14 @@ def open_folders_as_tabs(
     if not paths:
         return False
 
-    log.info("Opening as tabs: %d paths", len(paths))
+    log.info("Opening as tabs: %d paths, timeout=%.0fs", len(paths), timeout)
     for i, p in enumerate(paths):
         log.debug("  [%d] %s", i, p)
 
     # pywinauto UIA method (direct address bar input, most reliable)
     if _check_pywinauto():
         try:
-            return _open_tabs_pywinauto_uia(paths, on_progress, on_error)
+            return _open_tabs_pywinauto_uia(paths, on_progress, on_error, timeout=timeout)
         except Exception as e:
             log.warning("pywinauto UIA failed: %s", e)
 
@@ -246,6 +247,7 @@ def _open_tabs_pywinauto_uia(
     paths: list[str],
     on_progress: Callable[[int, int, str], None] | None = None,
     on_error: Callable[[str, str], None] | None = None,
+    timeout: float = 30.0,
 ) -> bool:
     """
     Open tabs using pywinauto UIA with direct address bar text input.
@@ -330,7 +332,7 @@ def _open_tabs_pywinauto_uia(
             pwa_keyboard.send_keys("{ENTER}")
 
             # Wait for navigation to complete
-            _wait_for_navigation(addr_edit, timeout=30.0)
+            _wait_for_navigation(addr_edit, timeout=timeout)
 
             if on_progress:
                 on_progress(i, len(paths), path)

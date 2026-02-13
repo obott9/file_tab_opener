@@ -71,17 +71,21 @@ def main() -> None:
     _setup_logging()
     log = logging.getLogger(__name__)
 
-    # Initialize i18n (must be before GUI construction)
-    from file_tab_opener import i18n
-    i18n.init()
-    log.info("Language: %s", i18n.get_language())
-
     # Load configuration
     from file_tab_opener.config import ConfigManager
 
     config = ConfigManager()
     config.load()
     log.info("Config loaded: %s", config.path)
+
+    # Initialize i18n: use saved language, otherwise detect from system
+    from file_tab_opener import i18n
+    saved_lang = config.data.settings.get("language")
+    if saved_lang and isinstance(saved_lang, str):
+        i18n.set_language(saved_lang)
+    else:
+        i18n.init()
+    log.info("Language: %s", i18n.get_language())
 
     # Import platform-specific opener
     opener = _get_opener()

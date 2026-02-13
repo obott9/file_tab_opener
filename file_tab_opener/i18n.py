@@ -17,6 +17,15 @@ log = logging.getLogger(__name__)
 LANG_EN: Final[str] = "en"
 LANG_JA: Final[str] = "ja"
 
+# Display names for the language switcher UI
+LANG_NAMES: Final[dict[str, str]] = {
+    LANG_EN: "English",
+    LANG_JA: "日本語",
+}
+
+# Ordered list of supported languages
+SUPPORTED_LANGS: Final[list[str]] = [LANG_EN, LANG_JA]
+
 # Translation table: key -> {lang: text}
 _STRINGS: Final[dict[str, dict[str, str]]] = {
     # --- App ---
@@ -159,6 +168,16 @@ _STRINGS: Final[dict[str, dict[str, str]]] = {
     "error.invalid_paths_msg": {
         "en": "The following paths will be skipped:\n{paths}",
         "ja": "\u4ee5\u4e0b\u306e\u30d1\u30b9\u306f\u30b9\u30ad\u30c3\u30d7\u3055\u308c\u307e\u3059:\n{paths}",
+    },
+
+    # --- Settings ---
+    "settings.timeout": {
+        "en": "Timeout",
+        "ja": "\u30bf\u30a4\u30e0\u30a2\u30a6\u30c8",
+    },
+    "settings.timeout_unit": {
+        "en": "sec",
+        "ja": "\u79d2",
     },
 }
 

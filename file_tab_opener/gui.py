@@ -17,7 +17,8 @@ from tkinter import filedialog, messagebox, simpledialog
 from typing import Any
 
 from file_tab_opener.config import ConfigManager
-from file_tab_opener.i18n import t
+from file_tab_opener import i18n
+from file_tab_opener.i18n import t, SUPPORTED_LANGS, LANG_NAMES
 
 # --- customtkinter availability check ---
 try:
@@ -79,82 +80,125 @@ def Entry(parent: Any, **kw: Any) -> ttk.Entry:
 
 
 class TabView:
-    """Unified interface for CTkTabview / ttk.Notebook."""
+    """Tab name selector using segmented button (CTk) or button row (ttk).
+
+    This is a lightweight tab-name-only selector — no content area.
+    The associated content (listbox, etc.) is managed externally.
+    """
 
     def __init__(self, parent: Any, on_tab_changed: Callable[[str], None] | None = None) -> None:
-        self._frames: dict[str, tk.Frame] = {}
+        self._names: list[str] = []
+        self._current: str | None = None
         self._on_tab_changed = on_tab_changed
+        self._parent = parent
 
-        if CTK_AVAILABLE:
-            self._widget = ctk.CTkTabview(parent, command=self._handle_change)
-        else:
-            self._widget = ttk.Notebook(parent)
-            self._widget.bind(
-                "<<NotebookTabChanged>>", lambda e: self._handle_change()
-            )
+        self._frame = ttk.Frame(parent)
+        self._seg_widget: Any = None  # CTkSegmentedButton or None
+        self._buttons: dict[str, Any] = {}  # ttk fallback buttons
 
     def pack(self, **kw: Any) -> None:
-        """Pack the tab widget."""
-        self._widget.pack(**kw)
+        """Pack the tab selector."""
+        self._frame.pack(**kw)
 
     def grid(self, **kw: Any) -> None:
-        """Grid the tab widget."""
-        self._widget.grid(**kw)
+        """Grid the tab selector."""
+        self._frame.grid(**kw)
 
-    def add_tab(self, name: str) -> tk.Frame:
-        """Add a tab and return its frame."""
-        if CTK_AVAILABLE:
-            tab_frame = self._widget.add(name)
-        else:
-            tab_frame = ttk.Frame(self._widget)
-            self._widget.add(tab_frame, text=name)
-        self._frames[name] = tab_frame
-        return tab_frame
+    def add_tab(self, name: str) -> None:
+        """Add a tab name."""
+        if name in self._names:
+            return
+        self._names.append(name)
+        self._rebuild()
 
     def delete_tab(self, name: str) -> None:
         """Delete a tab by name."""
-        if name not in self._frames:
+        if name not in self._names:
             return
-        if CTK_AVAILABLE:
-            self._widget.delete(name)
-        else:
-            self._widget.forget(self._frames[name])
-        del self._frames[name]
+        self._names.remove(name)
+        if self._current == name:
+            self._current = self._names[0] if self._names else None
+        self._rebuild()
 
     def get_current_tab_name(self) -> str | None:
         """Return the name of the currently selected tab."""
-        if not self._frames:
-            return None
-        if CTK_AVAILABLE:
-            try:
-                return self._widget.get()
-            except ValueError:
-                return None
-        else:
-            sel = self._widget.select()
-            if sel:
-                return self._widget.tab(sel, "text")
-            return None
+        return self._current
 
     def set_current_tab(self, name: str) -> None:
         """Select a tab by name."""
-        if name not in self._frames:
+        if name not in self._names:
             return
-        if CTK_AVAILABLE:
-            self._widget.set(name)
-        else:
-            self._widget.select(self._frames[name])
+        self._current = name
+        self._update_selection()
 
     def tab_names(self) -> list[str]:
         """Return the list of tab names."""
-        return list(self._frames.keys())
+        return list(self._names)
 
-    def _handle_change(self, *args: Any) -> None:
-        """Internal handler for tab change events."""
+    def _rebuild(self) -> None:
+        """Rebuild the selector widget from scratch."""
+        # Clear existing children
+        for child in self._frame.winfo_children():
+            child.destroy()
+        self._seg_widget = None
+        self._buttons.clear()
+
+        if not self._names:
+            return
+
+        if CTK_AVAILABLE:
+            self._seg_widget = ctk.CTkSegmentedButton(
+                self._frame,
+                values=self._names,
+                command=self._on_seg_click,
+            )
+            self._seg_widget.pack(fill=tk.X)
+            if self._current and self._current in self._names:
+                self._seg_widget.set(self._current)
+            elif self._names:
+                self._current = self._names[0]
+                self._seg_widget.set(self._current)
+        else:
+            for name in self._names:
+                btn = ttk.Button(
+                    self._frame,
+                    text=name,
+                    command=lambda n=name: self._on_btn_click(n),
+                )
+                btn.pack(side=tk.LEFT, padx=1)
+                self._buttons[name] = btn
+            if not self._current or self._current not in self._names:
+                self._current = self._names[0]
+            self._update_ttk_highlight()
+
+    def _update_selection(self) -> None:
+        """Update the visual selection state."""
+        if CTK_AVAILABLE and self._seg_widget:
+            if self._current:
+                self._seg_widget.set(self._current)
+        else:
+            self._update_ttk_highlight()
+
+    def _update_ttk_highlight(self) -> None:
+        """Highlight the active tab button (ttk fallback)."""
+        for name, btn in self._buttons.items():
+            if name == self._current:
+                btn.state(["pressed"])
+            else:
+                btn.state(["!pressed"])
+
+    def _on_seg_click(self, value: str) -> None:
+        """Handle CTkSegmentedButton click."""
+        self._current = value
         if self._on_tab_changed:
-            name = self.get_current_tab_name()
-            if name:
-                self._on_tab_changed(name)
+            self._on_tab_changed(value)
+
+    def _on_btn_click(self, name: str) -> None:
+        """Handle ttk button click."""
+        self._current = name
+        self._update_ttk_highlight()
+        if self._on_tab_changed:
+            self._on_tab_changed(name)
 
 
 # ============================================================
@@ -306,9 +350,9 @@ class TabGroupSection:
             tab_bar, text=t("tab.delete"), command=self._on_delete_tab, width=10
         ).pack(side=tk.LEFT, padx=2)
 
-        # --- Tab view ---
+        # --- Tab view (tab names only, no expand) ---
         self.tab_view = TabView(self.frame, on_tab_changed=self._on_tab_changed)
-        self.tab_view.pack(fill=tk.BOTH, expand=True)
+        self.tab_view.pack(fill=tk.X)
 
         # --- Content area (listbox + buttons) ---
         content = Frame(self.frame)
@@ -549,6 +593,7 @@ class MainWindow:
         self.config = config
         self.opener = opener
         self.root = get_root(t("app.title"))
+        self._content_frame: tk.Frame | None = None
 
     def build(self) -> None:
         """Build the GUI layout."""
@@ -558,27 +603,105 @@ class MainWindow:
             self.root.geometry(geom)
         self.root.minsize(600, 400)
 
+        self._build_content()
+
+        # Window close handler
+        self.root.protocol("WM_DELETE_WINDOW", self._on_close)
+
+    def _build_content(self) -> None:
+        """Build (or rebuild) all content widgets."""
+        # Destroy old content if rebuilding
+        if self._content_frame is not None:
+            self._content_frame.destroy()
+
+        self._content_frame = ttk.Frame(self.root)
+        self._content_frame.pack(fill=tk.BOTH, expand=True)
+
+        # --- Settings bar (top-right): timeout + language ---
+        settings_bar = Frame(self._content_frame)
+        settings_bar.pack(fill=tk.X, padx=10, pady=(5, 0))
+
+        settings_inner = ttk.Frame(settings_bar)
+        settings_inner.pack(side=tk.RIGHT)
+
+        # Timeout selector
+        Label(settings_inner, text=t("settings.timeout")).pack(side=tk.LEFT, padx=(0, 3))
+        self._timeout_combo = ttk.Combobox(
+            settings_inner,
+            values=["5", "10", "15", "30", "60"],
+            state="readonly",
+            width=3,
+        )
+        saved_timeout = self.config.data.settings.get("timeout", 30)
+        self._timeout_combo.set(str(saved_timeout))
+        self._timeout_combo.pack(side=tk.LEFT)
+        self._timeout_combo.bind("<<ComboboxSelected>>", self._on_timeout_changed)
+        Label(settings_inner, text=t("settings.timeout_unit")).pack(
+            side=tk.LEFT, padx=(1, 10)
+        )
+
+        # Language selector
+        Label(settings_inner, text="🌐").pack(side=tk.LEFT, padx=(0, 3))
+        self._lang_combo = ttk.Combobox(
+            settings_inner,
+            values=[LANG_NAMES[code] for code in SUPPORTED_LANGS],
+            state="readonly",
+            width=10,
+        )
+        current = i18n.get_language()
+        if current in LANG_NAMES:
+            self._lang_combo.set(LANG_NAMES[current])
+        self._lang_combo.pack(side=tk.LEFT)
+        self._lang_combo.bind("<<ComboboxSelected>>", self._on_language_changed)
+
         # --- Section 1: History ---
         self.history_section = HistorySection(
-            self.root, self.config, on_open_folder=self._open_single_folder
+            self._content_frame, self.config, on_open_folder=self._open_single_folder
         )
-        self.history_section.frame.pack(fill=tk.X, padx=10, pady=(10, 5))
+        self.history_section.frame.pack(fill=tk.X, padx=10, pady=(5, 5))
 
         # Separator
-        ttk.Separator(self.root, orient=tk.HORIZONTAL).pack(
+        ttk.Separator(self._content_frame, orient=tk.HORIZONTAL).pack(
             fill=tk.X, padx=10, pady=5
         )
 
         # --- Section 2: Tab groups ---
         self.tab_group_section = TabGroupSection(
-            self.root, self.config, on_open_tabs=self._open_folders_as_tabs
+            self._content_frame, self.config, on_open_tabs=self._open_folders_as_tabs
         )
         self.tab_group_section.frame.pack(
             fill=tk.BOTH, expand=True, padx=10, pady=(5, 10)
         )
 
-        # Window close handler
-        self.root.protocol("WM_DELETE_WINDOW", self._on_close)
+    def _on_timeout_changed(self, event: Any) -> None:
+        """Handle timeout change from the combobox."""
+        try:
+            value = int(self._timeout_combo.get())
+        except ValueError:
+            return
+        self.config.data.settings["timeout"] = value
+        self.config.save()
+
+    def _on_language_changed(self, event: Any) -> None:
+        """Handle language switch from the combobox."""
+        selected_name = self._lang_combo.get()
+        for code, name in LANG_NAMES.items():
+            if name == selected_name:
+                if code != i18n.get_language():
+                    i18n.set_language(code)
+                    self.config.data.settings["language"] = code
+                    self.config.save()
+                    self.root.title(t("app.title"))
+                    self._build_content()
+                return
+
+    def _get_timeout(self) -> float:
+        """Get the current timeout setting in seconds."""
+        val = self.config.data.settings.get("timeout", 30)
+        try:
+            return float(val)
+        except (TypeError, ValueError):
+            return 30.0
 
     def _open_single_folder(self, path: str) -> None:
         """Open a single folder."""
@@ -596,6 +719,8 @@ class MainWindow:
         if not valid:
             return
 
+        timeout = self._get_timeout()
+
         def do_open() -> None:
             self.opener.open_folders_as_tabs(
                 valid,
@@ -607,6 +732,7 @@ class MainWindow:
                         parent=self.root,
                     ),
                 ),
+                timeout=timeout,
             )
 
         threading.Thread(target=do_open, daemon=True).start()

@@ -96,6 +96,23 @@ python -m file_tab_opener
 | macOS | `~/.file_tab_opener.json` |
 | Linux | `~/.config/file_tab_opener/config.json` |
 
+## ログ
+
+アプリはターミナルに動作状況（`INFO`レベル）を出力し、ログファイルに詳細ログ（`DEBUG`レベル）を記録します。
+
+| 出力先 | レベル | 用途 |
+|--------|--------|------|
+| ターミナル (stderr) | INFO以上 | 起動状況、操作結果 |
+| ログファイル | DEBUG以上 | トラブルシューティング用の詳細記録 |
+
+ログファイルの場所:
+
+| OS | パス |
+|----|------|
+| Windows | `%APPDATA%\FileTabOpener\debug.log` |
+| macOS | `~/Library/Logs/FileTabOpener/debug.log` |
+| Linux | `~/.local/share/FileTabOpener/debug.log` |
+
 ## 開発
 
 ```bash
@@ -105,6 +122,25 @@ pip install -e .[all,dev]
 # テスト実行
 pytest tests/ -v
 ```
+
+## スタンドアロンアプリのビルド
+
+[PyInstaller](https://pyinstaller.org/) を使って、スタンドアロンの `.app`（macOS）または `.exe`（Windows）をビルドできます。個人利用ならコード署名は不要です。
+
+```bash
+# PyInstallerをインストール
+pip install pyinstaller
+
+# ビルド（ビルド対象のOS上で実行）
+pyinstaller --noconfirm --onedir --windowed \
+    --collect-all customtkinter \
+    --name "File Tab Opener" \
+    file_tab_opener/__main__.py
+```
+
+出力先は `dist/File Tab Opener/`。macOSでは `.app` バンドル、Windowsでは `.exe` フォルダが生成されます。
+
+> **注意:** 各OS用のビルドはそのOS上で行う必要があります。macOSからWindows用 `.exe` を作ることはできません（逆も同様）。
 
 ## プロジェクト構成
 

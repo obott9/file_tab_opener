@@ -35,27 +35,27 @@ class TestLanguageDetection:
 
     def test_detect_japanese(self) -> None:
         """Japanese locale should detect as 'ja'."""
-        with mock.patch("locale.getdefaultlocale", return_value=("ja_JP", "UTF-8")):
+        with mock.patch("locale.getlocale", return_value=("ja_JP", "UTF-8")):
             assert i18n.detect_system_language() == LANG_JA
 
     def test_detect_english(self) -> None:
         """English locale should detect as 'en'."""
-        with mock.patch("locale.getdefaultlocale", return_value=("en_US", "UTF-8")):
+        with mock.patch("locale.getlocale", return_value=("en_US", "UTF-8")):
             assert i18n.detect_system_language() == LANG_EN
 
     def test_detect_unknown_falls_back_to_en(self) -> None:
         """Unknown locale should fall back to English."""
-        with mock.patch("locale.getdefaultlocale", return_value=("ko_KR", "UTF-8")):
+        with mock.patch("locale.getlocale", return_value=("ko_KR", "UTF-8")):
             assert i18n.detect_system_language() == LANG_EN
 
     def test_detect_none_locale(self) -> None:
         """None locale should fall back to English."""
-        with mock.patch("locale.getdefaultlocale", return_value=(None, None)):
+        with mock.patch("locale.getlocale", return_value=(None, None)):
             assert i18n.detect_system_language() == LANG_EN
 
     def test_detect_exception(self) -> None:
         """Exception in locale detection should fall back to English."""
-        with mock.patch("locale.getdefaultlocale", side_effect=ValueError):
+        with mock.patch("locale.getlocale", side_effect=ValueError):
             assert i18n.detect_system_language() == LANG_EN
 
 
@@ -79,7 +79,7 @@ class TestSetGetLanguage:
 
     def test_init_sets_language(self) -> None:
         """init() should detect and set the system language."""
-        with mock.patch("locale.getdefaultlocale", return_value=("ja_JP", "UTF-8")):
+        with mock.patch("locale.getlocale", return_value=("ja_JP", "UTF-8")):
             i18n.init()
             assert i18n.get_language() == LANG_JA
 

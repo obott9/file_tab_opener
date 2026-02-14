@@ -146,6 +146,13 @@ def _bring_to_foreground(hwnd: int) -> None:
     ctypes.windll.user32.SetForegroundWindow(hwnd)
 
 
+def _apply_window_rect(hwnd: int, window_rect: tuple[int, int, int, int]) -> None:
+    """Move and resize a window to the specified (x, y, width, height)."""
+    x, y, w, h = window_rect
+    ctypes.windll.user32.MoveWindow(hwnd, x, y, w, h, True)
+    log.debug("Applied window rect: hwnd=%s, x=%d, y=%d, w=%d, h=%d", hwnd, x, y, w, h)
+
+
 def _wait_for_navigation(addr_edit: object, timeout: float = 30.0) -> bool:
     """
     Wait for navigation to complete.
@@ -189,10 +196,18 @@ def validate_paths(paths: list[str]) -> tuple[list[str], list[str]]:
     return valid, invalid
 
 
-def open_single_folder(path: str) -> bool:
+def open_single_folder(
+    path: str,
+    window_rect: tuple[int, int, int, int] | None = None,
+) -> bool:
     """Open a single folder in a new Explorer window."""
     try:
+        before_hwnds = _enum_explorer_hwnds() if window_rect else []
         subprocess.Popen(["explorer.exe", os.path.normpath(path)])
+        if window_rect:
+            hwnd = _find_new_explorer_hwnd(before_hwnds, timeout=5.0)
+            if hwnd:
+                _apply_window_rect(hwnd, window_rect)
         return True
     except OSError:
         return False
@@ -203,6 +218,7 @@ def open_folders_as_tabs(
     on_progress: Callable[[int, int, str], None] | None = None,
     on_error: Callable[[str, str], None] | None = None,
     timeout: float = 30.0,
+    window_rect: tuple[int, int, int, int] | None = None,
 ) -> bool:
     """
     Open multiple folders as tabs in a single Explorer window.
@@ -219,19 +235,21 @@ def open_folders_as_tabs(
     # pywinauto UIA method (direct address bar input, most reliable)
     if _check_pywinauto():
         try:
-            return _open_tabs_pywinauto_uia(paths, on_progress, on_error, timeout=timeout)
+            return _open_tabs_pywinauto_uia(
+                paths, on_progress, on_error, timeout=timeout, window_rect=window_rect,
+            )
         except Exception as e:
             log.warning("pywinauto UIA failed: %s", e)
 
     # ctypes SendInput fallback
     try:
-        return _open_tabs_ctypes(paths, on_progress, on_error)
+        return _open_tabs_ctypes(paths, on_progress, on_error, window_rect=window_rect)
     except Exception as e:
         log.warning("ctypes SendInput failed: %s", e)
 
     # Final fallback: separate windows (not tabs)
     log.info("Opening as separate windows (fallback)")
-    return _open_tabs_separate(paths, on_progress, on_error)
+    return _open_tabs_separate(paths, on_progress, on_error, window_rect=window_rect)
 
 
 def _check_pywinauto() -> bool:
@@ -248,6 +266,7 @@ def _open_tabs_pywinauto_uia(
     on_progress: Callable[[int, int, str], None] | None = None,
     on_error: Callable[[str, str], None] | None = None,
     timeout: float = 30.0,
+    window_rect: tuple[int, int, int, int] | None = None,
 ) -> bool:
     """
     Open tabs using pywinauto UIA with direct address bar text input.
@@ -342,6 +361,9 @@ def _open_tabs_pywinauto_uia(
             if on_error:
                 on_error(path, str(e))
 
+    if window_rect:
+        _apply_window_rect(new_hwnd, window_rect)
+
     return True
 
 
@@ -349,6 +371,7 @@ def _open_tabs_ctypes(
     paths: list[str],
     on_progress: Callable[[int, int, str], None] | None = None,
     on_error: Callable[[str, str], None] | None = None,
+    window_rect: tuple[int, int, int, int] | None = None,
 ) -> bool:
     """Open tabs using ctypes SendInput (keystroke-based, less reliable)."""
     log.info("Using ctypes SendInput method")
@@ -395,6 +418,9 @@ def _open_tabs_ctypes(
             if on_error:
                 on_error(path, str(e))
 
+    if window_rect:
+        _apply_window_rect(hwnd, window_rect)
+
     return True
 
 
@@ -402,11 +428,17 @@ def _open_tabs_separate(
     paths: list[str],
     on_progress: Callable[[int, int, str], None] | None = None,
     on_error: Callable[[str, str], None] | None = None,
+    window_rect: tuple[int, int, int, int] | None = None,
 ) -> bool:
     """Fallback: open each folder in a separate window."""
     for i, path in enumerate(paths, start=1):
         try:
+            before_hwnds = _enum_explorer_hwnds() if window_rect else []
             subprocess.Popen(["explorer.exe", os.path.normpath(path)])
+            if window_rect:
+                hwnd = _find_new_explorer_hwnd(before_hwnds, timeout=5.0)
+                if hwnd:
+                    _apply_window_rect(hwnd, window_rect)
             if on_progress:
                 on_progress(i, len(paths), path)
             time.sleep(0.3)

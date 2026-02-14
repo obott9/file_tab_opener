@@ -19,13 +19,13 @@ from pathlib import Path
 from tkinter import filedialog, messagebox, simpledialog
 from typing import Any
 
-IS_MAC = platform.system() == "Darwin"
-
-log = logging.getLogger(__name__)
-
 from file_tab_opener.config import ConfigManager
 from file_tab_opener import i18n
 from file_tab_opener.i18n import t, SUPPORTED_LANGS, LANG_NAMES
+
+IS_MAC = platform.system() == "Darwin"
+
+log = logging.getLogger(__name__)
 
 # --- customtkinter availability check ---
 try:
@@ -53,29 +53,29 @@ def get_root(title: str = "File Tab Opener") -> tk.Tk:
     return root
 
 
-def Frame(parent: Any, **kw: Any) -> ttk.Frame:
-    """Create a frame widget."""
+def Frame(parent: Any, **kw: Any) -> Any:
+    """Create a frame widget (CTkFrame or ttk.Frame)."""
     if CTK_AVAILABLE:
         return ctk.CTkFrame(parent, **kw)
     return ttk.Frame(parent, **kw)
 
 
-def Button(parent: Any, text: str = "", command: Callable[[], None] | None = None, **kw: Any) -> ttk.Button:
-    """Create a button widget."""
+def Button(parent: Any, text: str = "", command: Callable[[], None] | None = None, **kw: Any) -> Any:
+    """Create a button widget (CTkButton or ttk.Button)."""
     if CTK_AVAILABLE:
         return ctk.CTkButton(parent, text=text, command=command, **kw)
     return ttk.Button(parent, text=text, command=command, **kw)
 
 
-def Label(parent: Any, text: str = "", **kw: Any) -> ttk.Label:
-    """Create a label widget."""
+def Label(parent: Any, text: str = "", **kw: Any) -> Any:
+    """Create a label widget (CTkLabel or ttk.Label)."""
     if CTK_AVAILABLE:
         return ctk.CTkLabel(parent, text=text, **kw)
     return ttk.Label(parent, text=text, **kw)
 
 
-def Entry(parent: Any, **kw: Any) -> ttk.Entry:
-    """Create an entry widget."""
+def Entry(parent: Any, **kw: Any) -> Any:
+    """Create an entry widget (CTkEntry or ttk.Entry)."""
     if CTK_AVAILABLE:
         return ctk.CTkEntry(parent, **kw)
     return ttk.Entry(parent, **kw)
@@ -226,12 +226,12 @@ class TabView:
 
 
 # ============================================================
-# Section 1: History combobox
+# Section 1: History (entry + custom dropdown)
 # ============================================================
 
 
 class HistorySection:
-    """Top section: history dropdown + Open / Pin / Clear buttons."""
+    """Top section: history entry with custom dropdown + Open / Pin / Clear buttons."""
 
     def __init__(
         self,
@@ -245,7 +245,6 @@ class HistorySection:
 
         self.frame = Frame(parent)
         self._build_widgets()
-        self._refresh_combobox()
 
     def _build_widgets(self) -> None:
         """Build all widgets in the history section."""
@@ -386,10 +385,6 @@ class HistorySection:
             values.append(f"{prefix}{entry.path}")
         return values
 
-    def _refresh_combobox(self) -> None:
-        """Update display (kept for compatibility; dropdown builds values on open)."""
-        pass
-
     def _get_selected_path(self) -> str:
         """Extract the raw path from entry text (strip prefix only)."""
         text = self.entry.get().strip()
@@ -447,7 +442,6 @@ class HistorySection:
         if result:
             self.config.clear_history(keep_pinned=True)
             self.config.save()
-            self._refresh_combobox()
 
 
 # ============================================================

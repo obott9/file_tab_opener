@@ -96,6 +96,23 @@ Settings are stored in a JSON file:
 | macOS | `~/.file_tab_opener.json` |
 | Linux | `~/.config/file_tab_opener/config.json` |
 
+## Logging
+
+The app outputs status messages to the terminal (`INFO` level) and writes detailed logs to a file (`DEBUG` level).
+
+| Output | Level | Purpose |
+|--------|-------|---------|
+| Terminal (stderr) | INFO+ | Startup progress, operation results |
+| Log file | DEBUG+ | Detailed diagnostics for troubleshooting |
+
+Log file location:
+
+| OS | Path |
+|----|------|
+| Windows | `%APPDATA%\FileTabOpener\debug.log` |
+| macOS | `~/Library/Logs/FileTabOpener/debug.log` |
+| Linux | `~/.local/share/FileTabOpener/debug.log` |
+
 ## Development
 
 ```bash
@@ -105,6 +122,25 @@ pip install -e .[all,dev]
 # Run tests
 pytest tests/ -v
 ```
+
+## Build Standalone App
+
+You can build a standalone `.app` (macOS) or `.exe` (Windows) using [PyInstaller](https://pyinstaller.org/). No code signing is needed for personal use.
+
+```bash
+# Install PyInstaller
+pip install pyinstaller
+
+# Build (run on the OS you want to build for)
+pyinstaller --noconfirm --onedir --windowed \
+    --collect-all customtkinter \
+    --name "File Tab Opener" \
+    file_tab_opener/__main__.py
+```
+
+The output is in `dist/File Tab Opener/`. On macOS, a `.app` bundle is created; on Windows, a `.exe` folder.
+
+> **Note:** You must build on each OS separately — a macOS build cannot produce a Windows `.exe`, and vice versa.
 
 ## Project Structure
 

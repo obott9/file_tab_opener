@@ -39,10 +39,6 @@ _STRINGS: Final[dict[str, dict[str, str]]] = {
         "en": "History:",
         "ja": "\u5c65\u6b74:",
     },
-    "history.open": {
-        "en": "Open",
-        "ja": "\u958b\u304f",
-    },
     "history.open_finder": {
         "en": "Open in Finder",
         "ja": "Finder\u3067\u958b\u304f",
@@ -251,7 +247,7 @@ _current_lang: str = LANG_EN
 def detect_system_language() -> str:
     """Detect the system language and return the best matching language code."""
     try:
-        lang_code = locale.getdefaultlocale()[0] or ""
+        lang_code = locale.getlocale()[0] or ""
         lang_code = lang_code.lower()
         if lang_code.startswith("ja"):
             return LANG_JA

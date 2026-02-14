@@ -33,11 +33,29 @@ def validate_paths(paths: list[str]) -> tuple[list[str], list[str]]:
     return valid, invalid
 
 
-def open_single_folder(path: str) -> bool:
-    """Open a single folder in a new Finder window."""
+def open_single_folder(
+    path: str,
+    window_rect: tuple[int, int, int, int] | None = None,
+) -> bool:
+    """Open a single folder in a new Finder window.
+
+    Uses AppleScript to always create a new window.
+    The `open` command reuses an existing Finder window if the folder
+    is already open, which is not the desired behavior.
+    """
     try:
         expanded = os.path.expanduser(path)
-        subprocess.Popen(["open", expanded])
+        escaped = expanded.replace("\\", "\\\\").replace('"', '\\"')
+        script = (
+            'tell application "Finder"\n'
+            '  activate\n'
+            f'  make new Finder window to POSIX file "{escaped}" as alias\n'
+        )
+        if window_rect:
+            x, y, w, h = window_rect
+            script += f'  set bounds of front Finder window to {{{x}, {y}, {x + w}, {y + h}}}\n'
+        script += 'end tell'
+        subprocess.Popen(["osascript", "-e", script], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
         return True
     except OSError:
         return False
@@ -48,6 +66,7 @@ def open_folders_as_tabs(
     on_progress: Callable[[int, int, str], None] | None = None,
     on_error: Callable[[str, str], None] | None = None,
     timeout: float = 30.0,
+    window_rect: tuple[int, int, int, int] | None = None,
 ) -> bool:
     """
     Open multiple folders as tabs in a single Finder window.
@@ -64,7 +83,7 @@ def open_folders_as_tabs(
     expanded = [os.path.expanduser(p) for p in paths]
 
     try:
-        script = _build_applescript(expanded)
+        script = _build_applescript(expanded, window_rect=window_rect)
         log.debug("Running AppleScript (%d lines)", script.count("\n") + 1)
         success, error_msg = _run_applescript(script)
         if success:
@@ -92,10 +111,13 @@ def open_folders_as_tabs(
 
     # Fallback: open each folder in a separate window
     log.info("Opening as separate windows (fallback)")
-    return _open_separate(expanded, on_progress, on_error)
+    return _open_separate(expanded, on_progress, on_error, window_rect=window_rect)
 
 
-def _build_applescript(paths: list[str]) -> str:
+def _build_applescript(
+    paths: list[str],
+    window_rect: tuple[int, int, int, int] | None = None,
+) -> str:
     """Build an AppleScript to open folders as Finder tabs."""
 
     def esc(p: str) -> str:
@@ -103,10 +125,13 @@ def _build_applescript(paths: list[str]) -> str:
         return p.replace("\\", "\\\\").replace('"', '\\"')
 
     lines: list[str] = []
-    # First path: open in a new Finder window
+    # First path: always create a new Finder window (not reuse existing)
     lines.append('tell application "Finder"')
     lines.append("  activate")
-    lines.append(f'  open POSIX file "{esc(paths[0])}" as alias')
+    lines.append(f'  make new Finder window to POSIX file "{esc(paths[0])}" as alias')
+    if window_rect:
+        x, y, w, h = window_rect
+        lines.append(f"  set bounds of front Finder window to {{{x}, {y}, {x + w}, {y + h}}}")
     lines.append("end tell")
     lines.append("")
     lines.append("delay 0.5")
@@ -153,11 +178,22 @@ def _open_separate(
     paths: list[str],
     on_progress: Callable[[int, int, str], None] | None = None,
     on_error: Callable[[str, str], None] | None = None,
+    window_rect: tuple[int, int, int, int] | None = None,
 ) -> bool:
-    """Fallback: open each folder in a separate window."""
+    """Fallback: open each folder in a separate new window."""
     for i, path in enumerate(paths, start=1):
         try:
-            subprocess.Popen(["open", path])
+            escaped = path.replace("\\", "\\\\").replace('"', '\\"')
+            script = (
+                'tell application "Finder"\n'
+                '  activate\n'
+                f'  make new Finder window to POSIX file "{escaped}" as alias\n'
+            )
+            if window_rect:
+                x, y, w, h = window_rect
+                script += f'  set bounds of front Finder window to {{{x}, {y}, {x + w}, {y + h}}}\n'
+            script += 'end tell'
+            subprocess.Popen(["osascript", "-e", script], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
             log.debug("Opened separately: [%d/%d] %s", i, len(paths), path)
             if on_progress:
                 on_progress(i, len(paths), path)

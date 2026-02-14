@@ -43,6 +43,14 @@ _STRINGS: Final[dict[str, dict[str, str]]] = {
         "en": "Open",
         "ja": "\u958b\u304f",
     },
+    "history.open_finder": {
+        "en": "Open in Finder",
+        "ja": "Finder\u3067\u958b\u304f",
+    },
+    "history.open_explorer": {
+        "en": "Open in Explorer",
+        "ja": "\u30a8\u30af\u30b9\u30d7\u30ed\u30fc\u30e9\u30fc\u3067\u958b\u304f",
+    },
     "history.pin": {
         "en": "Pin",
         "ja": "Pin",

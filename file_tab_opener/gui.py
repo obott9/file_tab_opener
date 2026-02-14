@@ -254,15 +254,20 @@ class HistorySection:
         # Combobox (always use ttk.Combobox)
         self.combobox = ttk.Combobox(self.frame, width=50)
         self.combobox.pack(side=tk.LEFT, fill=tk.X, expand=True, padx=(0, 5))
+        _setup_placeholder(self.combobox, t("path.placeholder"))
 
         # macOS: clicking a combobox places the cursor at the end (text NOT selected).
-        # Windows: clicking a combobox auto-selects all text.
-        # Without this fix, pasting on macOS appends to existing text instead of
-        # replacing it, causing accidental path duplication.
         if IS_MAC:
-            self.combobox.bind("<FocusIn>", lambda e: e.widget.selection_range(0, tk.END))
+            self.combobox.bind(
+                "<FocusIn>", lambda e: e.widget.selection_range(0, tk.END), add="+",
+            )
 
-        Button(self.frame, text=t("history.open"), command=self._on_open, width=6).pack(
+        # Add horizontal scrollbar to combobox dropdown
+        self._dropdown_configured = False
+        self.combobox.configure(postcommand=self._configure_dropdown)
+
+        open_key = "history.open_finder" if IS_MAC else "history.open_explorer"
+        Button(self.frame, text=t(open_key), command=self._on_open).pack(
             side=tk.LEFT, padx=2
         )
         Button(self.frame, text=t("history.pin"), command=self._on_pin, width=5).pack(
@@ -271,6 +276,29 @@ class HistorySection:
         Button(self.frame, text=t("history.clear"), command=self._on_clear, width=6).pack(
             side=tk.LEFT, padx=2
         )
+
+    def _configure_dropdown(self) -> None:
+        """Add horizontal scrollbar to combobox dropdown (called on first open)."""
+        if self._dropdown_configured:
+            return
+        try:
+            w = str(self.combobox)
+            popdown = self.combobox.tk.call('ttk::combobox::PopdownWindow', w)
+            lb = f'{popdown}.f.l'
+            vsb = f'{popdown}.f.sb'
+            hsb = f'{popdown}.f.hsb'
+            self.combobox.tk.eval(f'pack forget {lb}')
+            self.combobox.tk.eval(f'pack forget {vsb}')
+            self.combobox.tk.eval(
+                f'scrollbar {hsb} -orient horizontal -command [list {lb} xview]'
+            )
+            self.combobox.tk.eval(f'{lb} configure -xscrollcommand [list {hsb} set]')
+            self.combobox.tk.eval(f'pack {hsb} -side bottom -fill x')
+            self.combobox.tk.eval(f'pack {vsb} -side right -fill y')
+            self.combobox.tk.eval(f'pack {lb} -side left -fill both -expand yes')
+            self._dropdown_configured = True
+        except Exception as e:
+            log.debug("Could not configure combobox dropdown scrollbar: %s", e)
 
     def _refresh_combobox(self) -> None:
         """Update combobox values from history."""
@@ -284,6 +312,8 @@ class HistorySection:
     def _get_selected_path(self) -> str:
         """Extract the raw path from combobox text (strip prefix only)."""
         text = self.combobox.get().strip()
+        if text == t("path.placeholder"):
+            return ""
         if text.startswith("[*] "):
             text = text[4:]
         elif text.startswith("    "):

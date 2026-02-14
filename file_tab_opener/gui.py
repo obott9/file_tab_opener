@@ -278,15 +278,32 @@ class HistorySection:
         )
 
     def _configure_dropdown(self) -> None:
-        """Add horizontal scrollbar to combobox dropdown (called on first open)."""
+        """Add horizontal scrollbar to combobox dropdown (deferred to after layout)."""
+        if self._dropdown_configured:
+            return
+        self.frame.after_idle(self._setup_dropdown_scrollbar)
+
+    def _setup_dropdown_scrollbar(self) -> None:
+        """Actually configure the dropdown scrollbar after the popdown is laid out."""
         if self._dropdown_configured:
             return
         try:
             w = str(self.combobox)
-            popdown = self.combobox.tk.call('ttk::combobox::PopdownWindow', w)
+            popdown = self.combobox.tk.eval(
+                f'ttk::combobox::PopdownWindow {w}'
+            )
+            log.info("Popdown: %s", popdown)
+            children = self.combobox.tk.eval(f'winfo children {popdown}.f')
+            log.info("Popdown children: %s", children)
+
             lb = f'{popdown}.f.l'
             vsb = f'{popdown}.f.sb'
             hsb = f'{popdown}.f.hsb'
+
+            if self.combobox.tk.eval(f'winfo exists {hsb}') == '1':
+                self._dropdown_configured = True
+                return
+
             self.combobox.tk.eval(f'pack forget {lb}')
             self.combobox.tk.eval(f'pack forget {vsb}')
             self.combobox.tk.eval(
@@ -297,8 +314,9 @@ class HistorySection:
             self.combobox.tk.eval(f'pack {vsb} -side right -fill y')
             self.combobox.tk.eval(f'pack {lb} -side left -fill both -expand yes')
             self._dropdown_configured = True
+            log.info("Dropdown scrollbar configured successfully")
         except Exception as e:
-            log.debug("Could not configure combobox dropdown scrollbar: %s", e)
+            log.warning("Could not configure combobox dropdown scrollbar: %s", e)
 
     def _refresh_combobox(self) -> None:
         """Update combobox values from history."""
@@ -511,6 +529,9 @@ class TabGroupSection:
         scrollbar_y.pack(side=tk.RIGHT, fill=tk.Y)
         self.listbox.pack(side=tk.TOP, fill=tk.BOTH, expand=True)
         scrollbar_x.pack(side=tk.BOTTOM, fill=tk.X)
+
+        # Copy selected path to entry field
+        self.listbox.bind("<<ListboxSelect>>", self._on_listbox_select)
 
         # Adjust listbox theme when using customtkinter
         if CTK_AVAILABLE:
@@ -762,6 +783,15 @@ class TabGroupSection:
             normalized = os.path.normpath(path)
             self.path_entry.delete(0, tk.END)
             self.path_entry.insert(0, normalized)
+
+    def _on_listbox_select(self, _event: Any) -> None:
+        """Copy selected listbox path to the path entry field."""
+        sel = self.listbox.curselection()
+        if not sel:
+            return
+        path = self.listbox.get(sel[0])
+        self.path_entry.delete(0, tk.END)
+        self.path_entry.insert(0, path)
 
     def _on_get_finder_bounds(self) -> None:
         """Get the frontmost Finder window's bounds and fill geometry fields."""

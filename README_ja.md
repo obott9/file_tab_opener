@@ -13,7 +13,7 @@
 - **履歴 & ピン留め** — 最近開いたフォルダを自動記録、よく使うものはピン留め
 - **クロスプラットフォーム** — Windows（Explorerタブ、Win 11以降）とmacOS（Finderタブ）対応
 - **デュアルテーマ** — [customtkinter](https://github.com/TomSchimansky/CustomTkinter) でモダンなUI。未インストール時は標準tkinterにフォールバック
-- **多言語対応** — 英語・日本語UI（システムロケールから自動検出）
+- **多言語対応** — 英語・日本語・韓国語・繁体字中国語・簡体字中国語（システムロケールから自動検出）
 
 ## 動作要件
 
@@ -86,6 +86,10 @@ python -m file_tab_opener
 
 > **注意:** AppleScript方式にはアクセシビリティ権限が必要です。**システム設定 → プライバシーとセキュリティ → アクセシビリティ** でTerminal.app（またはお使いのターミナル）を許可してください。
 
+### パフォーマンスについて（Windows）
+
+Windows Explorerにはタブ操作用の公開APIがありません。すべての方式がUIオートメーションまたはキーストローク送信（`Ctrl+T` → アドレスバー入力）に依存しており、タブごとにUIの応答を待つ `delay` が必要です。タブ数が多い場合、macOS（FinderはAppleScriptで直接タブ操作可能）に比べて明らかに遅くなります。
+
 ## 設定ファイル
 
 設定はJSONファイルに保存されます:
@@ -154,13 +158,13 @@ file_tab_opener/
 │   ├── __init__.py
 │   ├── __main__.py          # エントリーポイント
 │   ├── config.py            # 設定ファイル管理
-│   ├── i18n.py              # 国際化（英語/日本語）
+│   ├── i18n.py              # 国際化（5言語対応）
 │   ├── gui.py               # GUI（customtkinter / tkinter）
 │   ├── opener_win.py        # Windows Explorerタブ開き処理
 │   └── opener_mac.py        # macOS Finderタブ開き処理
 └── tests/
     ├── test_config.py       # 設定モジュールのテスト（40テスト）
-    └── test_i18n.py         # i18nモジュールのテスト（18テスト）
+    └── test_i18n.py         # i18nモジュールのテスト（28テスト）
 ```
 
 ## ライセンス

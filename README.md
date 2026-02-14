@@ -13,7 +13,7 @@ Instead of opening folders one by one, register them in a named tab group and op
 - **History with Pin** — Recently opened folders are tracked; pin frequently used ones
 - **Cross-Platform** — Windows (Explorer tabs, Win 11+) and macOS (Finder tabs)
 - **Dual Theme** — Uses [customtkinter](https://github.com/TomSchimansky/CustomTkinter) for a modern look; falls back to standard tkinter if unavailable
-- **i18n** — English and Japanese UI (auto-detected from system locale)
+- **i18n** — English, Japanese, Korean, Traditional Chinese, Simplified Chinese (auto-detected from system locale)
 
 ## Requirements
 
@@ -86,6 +86,10 @@ Two-tier fallback:
 
 > **Note:** The AppleScript method requires Accessibility permission. Go to **System Settings → Privacy & Security → Accessibility** and enable access for Terminal.app (or your terminal emulator).
 
+### Performance Note (Windows)
+
+Windows Explorer does not provide a public API for tab operations. All methods rely on UI Automation or keystroke simulation (`Ctrl+T` → address bar input), which requires `delay` waits between each tab for the UI to respond. Opening many tabs will be noticeably slower than on macOS, where Finder supports direct tab manipulation via AppleScript.
+
 ## Configuration
 
 Settings are stored in a JSON file:
@@ -154,13 +158,13 @@ file_tab_opener/
 │   ├── __init__.py
 │   ├── __main__.py          # Entry point
 │   ├── config.py            # Configuration management
-│   ├── i18n.py              # Internationalization (EN/JA)
+│   ├── i18n.py              # Internationalization (5 languages)
 │   ├── gui.py               # GUI (customtkinter / tkinter)
 │   ├── opener_win.py        # Windows Explorer tab opener
 │   └── opener_mac.py        # macOS Finder tab opener
 └── tests/
     ├── test_config.py       # Config module tests (40 tests)
-    └── test_i18n.py         # i18n module tests (18 tests)
+    └── test_i18n.py         # i18n module tests (28 tests)
 ```
 
 ## License

@@ -7,8 +7,10 @@ All user-facing text is provided via the i18n module.
 
 from __future__ import annotations
 
+import logging
 import os
 import platform
+import subprocess
 import threading
 import tkinter as tk
 import tkinter.ttk as ttk
@@ -18,6 +20,8 @@ from tkinter import filedialog, messagebox, simpledialog
 from typing import Any
 
 IS_MAC = platform.system() == "Darwin"
+
+log = logging.getLogger(__name__)
 
 from file_tab_opener.config import ConfigManager
 from file_tab_opener import i18n
@@ -442,7 +446,13 @@ class TabGroupSection:
 
         Label(geom_frame, text=t("window.height")).pack(side=tk.LEFT, padx=(0, 2))
         self._geom_h_entry = Entry(geom_frame, width=geom_entry_width)
-        self._geom_h_entry.pack(side=tk.LEFT)
+        self._geom_h_entry.pack(side=tk.LEFT, padx=(0, 8))
+
+        if IS_MAC:
+            Button(
+                geom_frame, text=t("window.get_from_finder"),
+                command=self._on_get_finder_bounds, width=14,
+            ).pack(side=tk.LEFT)
 
         for entry in (self._geom_x_entry, self._geom_y_entry,
                        self._geom_w_entry, self._geom_h_entry):
@@ -721,6 +731,41 @@ class TabGroupSection:
             normalized = os.path.normpath(path)
             self.path_entry.delete(0, tk.END)
             self.path_entry.insert(0, normalized)
+
+    def _on_get_finder_bounds(self) -> None:
+        """Get the frontmost Finder window's bounds and fill geometry fields."""
+        try:
+            result = subprocess.run(
+                ["osascript", "-e",
+                 'tell application "Finder" to get bounds of front Finder window'],
+                capture_output=True, text=True, timeout=5,
+            )
+            if result.returncode != 0:
+                messagebox.showinfo(
+                    t("window.no_finder_title"),
+                    t("window.no_finder_msg"),
+                    parent=self.frame.winfo_toplevel(),
+                )
+                return
+            parts = [int(s.strip()) for s in result.stdout.strip().split(",")]
+            x, y, x2, y2 = parts[0], parts[1], parts[2], parts[3]
+            w, h = x2 - x, y2 - y
+        except Exception as e:
+            log.warning("Failed to get Finder bounds: %s", e)
+            messagebox.showinfo(
+                t("window.no_finder_title"),
+                t("window.no_finder_msg"),
+                parent=self.frame.winfo_toplevel(),
+            )
+            return
+
+        for entry, val in [
+            (self._geom_x_entry, x), (self._geom_y_entry, y),
+            (self._geom_w_entry, w), (self._geom_h_entry, h),
+        ]:
+            entry.delete(0, tk.END)
+            entry.insert(0, str(val))
+        self._save_geometry()
 
     def _load_geometry(self) -> None:
         """Load window geometry values from the current tab group into the entry fields."""

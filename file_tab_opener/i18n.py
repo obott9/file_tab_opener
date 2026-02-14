@@ -212,6 +212,19 @@ _STRINGS: Final[dict[str, dict[str, str]]] = {
         "ja": "\u9ad8\u3055:",
     },
 
+    "window.get_from_finder": {
+        "en": "Get from Finder",
+        "ja": "Finderから取得",
+    },
+    "window.no_finder_title": {
+        "en": "No Finder Window",
+        "ja": "Finderウィンドウなし",
+    },
+    "window.no_finder_msg": {
+        "en": "No Finder window is open.",
+        "ja": "Finderウィンドウが開いていません。",
+    },
+
     # --- Settings ---
     "settings.timeout": {
         "en": "Timeout",

@@ -276,6 +276,27 @@ class ConfigManager:
             item = groups.pop(old_index)
             groups.insert(new_index, item)
 
+    def copy_tab_group(self, name: str) -> TabGroup | None:
+        """Copy a tab group with an auto-incremented name (e.g., 'Tab 1' -> 'Tab 1 2')."""
+        source = self.get_tab_group(name)
+        if not source:
+            return None
+        existing_names = {g.name for g in self.data.tab_groups}
+        suffix = 2
+        while f"{name} {suffix}" in existing_names:
+            suffix += 1
+        new_name = f"{name} {suffix}"
+        new_group = TabGroup(
+            name=new_name,
+            paths=list(source.paths),
+            window_x=source.window_x,
+            window_y=source.window_y,
+            window_width=source.window_width,
+            window_height=source.window_height,
+        )
+        self.data.tab_groups.append(new_group)
+        return new_group
+
     def move_path_in_group(self, group_name: str, old_index: int, new_index: int) -> None:
         """Reorder a path within a tab group."""
         group = self.get_tab_group(group_name)

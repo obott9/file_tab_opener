@@ -520,6 +520,9 @@ class TabGroupSection:
             tab_bar, text=t("tab.rename"), command=self._on_rename_tab, width=10
         ).pack(side=tk.LEFT, padx=2)
         Button(
+            tab_bar, text=t("tab.copy"), command=self._on_copy_tab, width=10
+        ).pack(side=tk.LEFT, padx=2)
+        Button(
             tab_bar, text=t("tab.move_left"), command=self._on_move_tab_left, width=3
         ).pack(side=tk.LEFT, padx=(10, 0))
         Button(
@@ -753,6 +756,21 @@ class TabGroupSection:
         self.config.save()
         self.tab_view.rename_tab(old_name, new_name)
         self.current_tab_name = new_name
+
+    def _on_copy_tab(self) -> None:
+        """Handle the Copy Tab button click."""
+        name = self.tab_view.get_current_tab_name()
+        if not name:
+            return
+        new_group = self.config.copy_tab_group(name)
+        if not new_group:
+            return
+        self.config.save()
+        self.tab_view.add_tab(new_group.name)
+        self.tab_view.set_current_tab(new_group.name)
+        self.current_tab_name = new_group.name
+        self._refresh_listbox()
+        self._load_geometry()
 
     def _on_move_tab_left(self) -> None:
         """Move the current tab one position to the left."""

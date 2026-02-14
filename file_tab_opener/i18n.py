@@ -151,6 +151,13 @@ _STRINGS: Final[dict[str, dict[str, str]]] = {
         "zh_TW": "分頁 '{name}' 已存在。",
         "zh_CN": "标签 '{name}' 已存在。",
     },
+    "tab.copy": {
+        "en": "Copy Tab",
+        "ja": "タブ複製",
+        "ko": "탭 복사",
+        "zh_TW": "複製分頁",
+        "zh_CN": "复制标签",
+    },
     "tab.move_left": {
         "en": "\u25c0",
         "ja": "\u25c0",

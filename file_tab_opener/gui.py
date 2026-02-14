@@ -251,20 +251,29 @@ class HistorySection:
         """Build all widgets in the history section."""
         Label(self.frame, text=t("history.label")).pack(side=tk.LEFT, padx=(0, 5))
 
-        # Combobox (always use ttk.Combobox)
-        self.combobox = ttk.Combobox(self.frame, width=50)
-        self.combobox.pack(side=tk.LEFT, fill=tk.X, expand=True, padx=(0, 5))
-        _setup_placeholder(self.combobox, t("path.placeholder"))
+        # Entry with custom dropdown (cross-platform scrollable list)
+        entry_frame = ttk.Frame(self.frame)
+        entry_frame.pack(side=tk.LEFT, fill=tk.X, expand=True, padx=(0, 5))
 
-        # macOS: clicking a combobox places the cursor at the end (text NOT selected).
-        if IS_MAC:
-            self.combobox.bind(
-                "<FocusIn>", lambda e: e.widget.selection_range(0, tk.END), add="+",
-            )
+        if CTK_AVAILABLE:
+            self.entry = ctk.CTkEntry(entry_frame, placeholder_text=t("path.placeholder"))
+        else:
+            self.entry = ttk.Entry(entry_frame)
+            _setup_placeholder(self.entry, t("path.placeholder"))
+            if IS_MAC:
+                self.entry.bind(
+                    "<FocusIn>", lambda e: e.widget.selection_range(0, tk.END), add="+",
+                )
+        self.entry.pack(side=tk.LEFT, fill=tk.X, expand=True)
 
-        # Add horizontal scrollbar to combobox dropdown
-        self._dropdown_configured = False
-        self.combobox.configure(postcommand=self._configure_dropdown)
+        # Dropdown toggle button
+        self._dropdown_btn = ttk.Button(
+            entry_frame, text="\u25bc", width=2, command=self._toggle_dropdown,
+        )
+        self._dropdown_btn.pack(side=tk.LEFT)
+
+        self._dropdown_win: tk.Toplevel | None = None
+        self._dropdown_listbox: tk.Listbox | None = None
 
         open_key = "history.open_finder" if IS_MAC else "history.open_explorer"
         Button(self.frame, text=t(open_key), command=self._on_open).pack(
@@ -277,59 +286,108 @@ class HistorySection:
             side=tk.LEFT, padx=2
         )
 
-    def _configure_dropdown(self) -> None:
-        """Add horizontal scrollbar to combobox dropdown (deferred to after layout)."""
-        if self._dropdown_configured:
+    def _toggle_dropdown(self) -> None:
+        """Show or hide the custom dropdown list."""
+        if self._dropdown_win and self._dropdown_win.winfo_exists():
+            self._close_dropdown()
             return
-        self.frame.after_idle(self._setup_dropdown_scrollbar)
+        self._show_dropdown()
 
-    def _setup_dropdown_scrollbar(self) -> None:
-        """Actually configure the dropdown scrollbar after the popdown is laid out."""
-        if self._dropdown_configured:
+    def _show_dropdown(self) -> None:
+        """Show the custom scrollable dropdown below the entry."""
+        values = self._get_dropdown_values()
+        if not values:
             return
-        try:
-            w = str(self.combobox)
-            popdown = self.combobox.tk.eval(
-                f'ttk::combobox::PopdownWindow {w}'
-            )
-            log.info("Popdown: %s", popdown)
-            children = self.combobox.tk.eval(f'winfo children {popdown}.f')
-            log.info("Popdown children: %s", children)
 
-            lb = f'{popdown}.f.l'
-            vsb = f'{popdown}.f.sb'
-            hsb = f'{popdown}.f.hsb'
+        self._dropdown_win = tk.Toplevel(self.frame)
+        self._dropdown_win.wm_overrideredirect(True)
 
-            if self.combobox.tk.eval(f'winfo exists {hsb}') == '1':
-                self._dropdown_configured = True
-                return
+        # Position below the entry
+        x = self.entry.winfo_rootx()
+        y = self.entry.winfo_rooty() + self.entry.winfo_height()
+        width = self.entry.winfo_width() + self._dropdown_btn.winfo_width()
 
-            self.combobox.tk.eval(f'pack forget {lb}')
-            self.combobox.tk.eval(f'pack forget {vsb}')
-            self.combobox.tk.eval(
-                f'scrollbar {hsb} -orient horizontal -command [list {lb} xview]'
-            )
-            self.combobox.tk.eval(f'{lb} configure -xscrollcommand [list {hsb} set]')
-            self.combobox.tk.eval(f'pack {hsb} -side bottom -fill x')
-            self.combobox.tk.eval(f'pack {vsb} -side right -fill y')
-            self.combobox.tk.eval(f'pack {lb} -side left -fill both -expand yes')
-            self._dropdown_configured = True
-            log.info("Dropdown scrollbar configured successfully")
-        except Exception as e:
-            log.warning("Could not configure combobox dropdown scrollbar: %s", e)
+        # Calculate needed height (max 10 items)
+        row_count = min(len(values), 10)
 
-    def _refresh_combobox(self) -> None:
-        """Update combobox values from history."""
+        list_frame = ttk.Frame(self._dropdown_win)
+        list_frame.pack(fill=tk.BOTH, expand=True)
+
+        self._dropdown_listbox = tk.Listbox(
+            list_frame, selectmode=tk.SINGLE, height=row_count,
+        )
+        scrollbar_y = ttk.Scrollbar(
+            list_frame, orient=tk.VERTICAL, command=self._dropdown_listbox.yview,
+        )
+        scrollbar_x = ttk.Scrollbar(
+            list_frame, orient=tk.HORIZONTAL, command=self._dropdown_listbox.xview,
+        )
+        self._dropdown_listbox.configure(
+            yscrollcommand=scrollbar_y.set, xscrollcommand=scrollbar_x.set,
+        )
+
+        scrollbar_y.pack(side=tk.RIGHT, fill=tk.Y)
+        scrollbar_x.pack(side=tk.BOTTOM, fill=tk.X)
+        self._dropdown_listbox.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+
+        for v in values:
+            self._dropdown_listbox.insert(tk.END, v)
+
+        # Theme the listbox for customtkinter dark mode
+        if CTK_AVAILABLE:
+            try:
+                mode = ctk.get_appearance_mode()
+                if mode == "Dark":
+                    self._dropdown_listbox.configure(
+                        bg="#2b2b2b", fg="#ffffff", selectbackground="#1f6aa5",
+                    )
+            except Exception:
+                pass
+
+        self._dropdown_listbox.bind("<<ListboxSelect>>", self._on_dropdown_select)
+
+        # Size and position
+        self._dropdown_win.geometry(f"{width}x{row_count * 20 + 20}+{x}+{y}")
+        self._dropdown_win.update_idletasks()
+
+        # Close on click outside
+        self._dropdown_win.bind("<FocusOut>", lambda e: self.frame.after(100, self._close_dropdown))
+
+    def _close_dropdown(self) -> None:
+        """Close the custom dropdown."""
+        if self._dropdown_win and self._dropdown_win.winfo_exists():
+            self._dropdown_win.destroy()
+        self._dropdown_win = None
+        self._dropdown_listbox = None
+
+    def _on_dropdown_select(self, _event: Any) -> None:
+        """Handle selection from the custom dropdown."""
+        if not self._dropdown_listbox:
+            return
+        sel = self._dropdown_listbox.curselection()
+        if not sel:
+            return
+        value = self._dropdown_listbox.get(sel[0])
+        self.entry.delete(0, tk.END)
+        self.entry.insert(0, value)
+        self._close_dropdown()
+
+    def _get_dropdown_values(self) -> list[str]:
+        """Build the dropdown value list from history."""
         history = self.config.get_sorted_history()
         values: list[str] = []
         for entry in history:
             prefix = "[*] " if entry.pinned else "    "
             values.append(f"{prefix}{entry.path}")
-        self.combobox["values"] = values
+        return values
+
+    def _refresh_combobox(self) -> None:
+        """Update display (kept for compatibility; dropdown builds values on open)."""
+        pass
 
     def _get_selected_path(self) -> str:
-        """Extract the raw path from combobox text (strip prefix only)."""
-        text = self.combobox.get().strip()
+        """Extract the raw path from entry text (strip prefix only)."""
+        text = self.entry.get().strip()
         if text == t("path.placeholder"):
             return ""
         if text.startswith("[*] "):
@@ -347,8 +405,8 @@ class HistorySection:
         if Path(expanded).is_dir():
             self.config.add_history(expanded)
             self.config.save()
-            self._refresh_combobox()
-            self.combobox.set(expanded)
+            self.entry.delete(0, tk.END)
+            self.entry.insert(0, expanded)
             self.on_open_folder(expanded)
         else:
             messagebox.showwarning(
@@ -363,7 +421,6 @@ class HistorySection:
         if not path:
             return
         expanded = os.path.expanduser(path)
-        # Add to history if not already present
         normalized = os.path.normpath(expanded)
         found = False
         for entry in self.config.data.history:
@@ -374,7 +431,6 @@ class HistorySection:
             self.config.add_history(expanded)
         self.config.toggle_pin(expanded)
         self.config.save()
-        self._refresh_combobox()
 
     def _on_clear(self) -> None:
         """Handle the Clear button click."""

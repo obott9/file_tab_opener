@@ -24,6 +24,10 @@ from pathlib import Path
 
 log = logging.getLogger(__name__)
 
+# --- Timeout constants ---
+_WINDOW_FIND_TIMEOUT = 10.0  # Max wait for new Explorer window detection (seconds)
+_WINDOW_FIND_TIMEOUT_SHORT = 5.0  # Shorter timeout for single/separate windows
+
 # --- ctypes SendInput constants and structures ---
 INPUT_KEYBOARD = 1
 KEYEVENTF_KEYUP = 0x0002
@@ -153,6 +157,45 @@ def _apply_window_rect(hwnd: int, window_rect: tuple[int, int, int, int]) -> Non
     log.debug("Applied window rect: hwnd=%s, x=%d, y=%d, w=%d, h=%d", hwnd, x, y, w, h)
 
 
+def _is_explorer_hwnd(hwnd: int) -> bool:
+    """Check if a window handle belongs to an Explorer window (CabinetWClass)."""
+    buf = ctypes.create_unicode_buffer(256)
+    ctypes.windll.user32.GetClassNameW(hwnd, buf, 256)
+    return buf.value == "CabinetWClass"
+
+
+def get_frontmost_explorer_rect() -> tuple[int, int, int, int] | None:
+    """Get the frontmost Explorer window's position and size.
+
+    Returns (x, y, width, height) or None if no Explorer window is found.
+
+    Strategy:
+    1. Check if the current foreground window is an Explorer window.
+    2. If not, fall back to the first window from _enum_explorer_hwnds().
+    """
+    # Try the foreground window first
+    fg_hwnd = ctypes.windll.user32.GetForegroundWindow()
+    if fg_hwnd and _is_explorer_hwnd(fg_hwnd):
+        hwnd = fg_hwnd
+    else:
+        # Fall back to any Explorer window
+        hwnds = _enum_explorer_hwnds()
+        if not hwnds:
+            log.debug("No Explorer window found")
+            return None
+        hwnd = hwnds[0]
+
+    rect = wintypes.RECT()
+    if not ctypes.windll.user32.GetWindowRect(hwnd, ctypes.byref(rect)):
+        log.warning("GetWindowRect failed for hwnd=%s", hwnd)
+        return None
+
+    x, y = rect.left, rect.top
+    w, h = rect.right - rect.left, rect.bottom - rect.top
+    log.debug("Explorer rect: hwnd=%s, x=%d, y=%d, w=%d, h=%d", hwnd, x, y, w, h)
+    return (x, y, w, h)
+
+
 def _wait_for_navigation(addr_edit: object, timeout: float = 30.0) -> bool:
     """
     Wait for navigation to complete.
@@ -205,7 +248,7 @@ def open_single_folder(
         before_hwnds = _enum_explorer_hwnds() if window_rect else []
         subprocess.Popen(["explorer.exe", os.path.normpath(path)])
         if window_rect:
-            hwnd = _find_new_explorer_hwnd(before_hwnds, timeout=5.0)
+            hwnd = _find_new_explorer_hwnd(before_hwnds, timeout=_WINDOW_FIND_TIMEOUT_SHORT)
             if hwnd:
                 _apply_window_rect(hwnd, window_rect)
         return True
@@ -243,7 +286,7 @@ def open_folders_as_tabs(
 
     # ctypes SendInput fallback
     try:
-        return _open_tabs_ctypes(paths, on_progress, on_error, window_rect=window_rect)
+        return _open_tabs_ctypes(paths, on_progress, on_error, timeout=timeout, window_rect=window_rect)
     except Exception as e:
         log.warning("ctypes SendInput failed: %s", e)
 
@@ -289,7 +332,8 @@ def _open_tabs_pywinauto_uia(
     log.debug("Launched explorer.exe: %s", first_path)
 
     # Wait for the new window to appear
-    new_hwnd = _find_new_explorer_hwnd(before_hwnds, timeout=10.0)
+    find_timeout = min(timeout, _WINDOW_FIND_TIMEOUT)
+    new_hwnd = _find_new_explorer_hwnd(before_hwnds, timeout=find_timeout)
     if not new_hwnd:
         raise RuntimeError("New Explorer window not found")
 
@@ -371,6 +415,7 @@ def _open_tabs_ctypes(
     paths: list[str],
     on_progress: Callable[[int, int, str], None] | None = None,
     on_error: Callable[[str, str], None] | None = None,
+    timeout: float = 30.0,
     window_rect: tuple[int, int, int, int] | None = None,
 ) -> bool:
     """Open tabs using ctypes SendInput (keystroke-based, less reliable)."""
@@ -390,7 +435,8 @@ def _open_tabs_ctypes(
         return True
 
     # Bring the new Explorer window to the foreground
-    hwnd = _find_new_explorer_hwnd(before_hwnds, timeout=10.0)
+    find_timeout = min(timeout, _WINDOW_FIND_TIMEOUT)
+    hwnd = _find_new_explorer_hwnd(before_hwnds, timeout=find_timeout)
     if not hwnd:
         raise RuntimeError("New Explorer window not found")
     _bring_to_foreground(hwnd)
@@ -436,7 +482,7 @@ def _open_tabs_separate(
             before_hwnds = _enum_explorer_hwnds() if window_rect else []
             subprocess.Popen(["explorer.exe", os.path.normpath(path)])
             if window_rect:
-                hwnd = _find_new_explorer_hwnd(before_hwnds, timeout=5.0)
+                hwnd = _find_new_explorer_hwnd(before_hwnds, timeout=_WINDOW_FIND_TIMEOUT_SHORT)
                 if hwnd:
                     _apply_window_rect(hwnd, window_rect)
             if on_progress:

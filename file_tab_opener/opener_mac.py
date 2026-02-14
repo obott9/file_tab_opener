@@ -19,6 +19,10 @@ from pathlib import Path
 
 log = logging.getLogger(__name__)
 
+# --- Constants ---
+_APPLESCRIPT_TIMEOUT = 30  # osascript execution timeout (seconds)
+_ACCESSIBILITY_KEYWORDS = ("assistive", "アクセシビリティ", "辅助功能", "보조")
+
 
 def validate_paths(paths: list[str]) -> tuple[list[str], list[str]]:
     """Validate paths. Returns (valid_paths, invalid_paths)."""
@@ -82,10 +86,10 @@ def open_folders_as_tabs(
 
     expanded = [os.path.expanduser(p) for p in paths]
 
+    script = _build_applescript(expanded, window_rect=window_rect)
+    log.debug("Running AppleScript (%d lines)", script.count("\n") + 1)
     try:
-        script = _build_applescript(expanded, window_rect=window_rect)
-        log.debug("Running AppleScript (%d lines)", script.count("\n") + 1)
-        success, error_msg = _run_applescript(script)
+        success, error_msg = _run_applescript(script, timeout=timeout)
         if success:
             log.info("AppleScript succeeded")
             if on_progress:
@@ -95,13 +99,9 @@ def open_folders_as_tabs(
         else:
             log.warning("AppleScript failed: %s", error_msg)
             if on_error:
-                if "assistive" in error_msg.lower():
-                    on_error(
-                        expanded[0],
-                        "Accessibility permission required.\n"
-                        "Go to System Settings → Privacy & Security → Accessibility\n"
-                        "and enable access for Terminal.app.",
-                    )
+                if any(kw in error_msg.lower() for kw in _ACCESSIBILITY_KEYWORDS):
+                    from file_tab_opener.i18n import t
+                    on_error(expanded[0], t("error.accessibility_required"))
                 else:
                     on_error(expanded[0], f"AppleScript error: {error_msg}")
     except Exception as e:
@@ -158,14 +158,14 @@ def _build_applescript(
     return "\n".join(lines)
 
 
-def _run_applescript(script: str) -> tuple[bool, str]:
+def _run_applescript(script: str, timeout: float = _APPLESCRIPT_TIMEOUT) -> tuple[bool, str]:
     """Execute an AppleScript via osascript. Returns (success, error_message)."""
     try:
         result = subprocess.run(
             ["osascript", "-e", script],
             capture_output=True,
             text=True,
-            timeout=30,
+            timeout=timeout,
         )
         return result.returncode == 0, result.stderr.strip()
     except subprocess.TimeoutExpired:

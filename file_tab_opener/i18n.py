@@ -323,6 +323,23 @@ _STRINGS: Final[dict[str, dict[str, str]]] = {
         "zh_TW": "以下路徑將被跳過：\n{paths}",
         "zh_CN": "以下路径将被跳过：\n{paths}",
     },
+    "error.accessibility_required": {
+        "en": "Accessibility permission required.\n"
+              "Go to System Settings → Privacy & Security → Accessibility\n"
+              "and enable access for Terminal.app.",
+        "ja": "アクセシビリティの許可が必要です。\n"
+              "システム設定 → プライバシーとセキュリティ → アクセシビリティ\n"
+              "でTerminal.appのアクセスを有効にしてください。",
+        "ko": "손쉬운 사용 권한이 필요합니다.\n"
+              "시스템 설정 → 개인정보 보호 및 보안 → 손쉬운 사용\n"
+              "에서 Terminal.app의 접근을 허용하세요.",
+        "zh_TW": "需要輔助使用權限。\n"
+                 "前往系統設定 → 隱私與安全性 → 輔助使用\n"
+                 "並啟用 Terminal.app 的存取權限。",
+        "zh_CN": "需要辅助功能权限。\n"
+                 "前往系统设置 → 隐私与安全性 → 辅助功能\n"
+                 "并启用 Terminal.app 的访问权限。",
+    },
 
     # --- Window geometry ---
     "window.x": {
@@ -374,6 +391,28 @@ _STRINGS: Final[dict[str, dict[str, str]]] = {
         "ko": "열려 있는 Finder 창이 없습니다.",
         "zh_TW": "沒有開啟的 Finder 視窗。",
         "zh_CN": "没有打开的 Finder 窗口。",
+    },
+
+    "window.get_from_explorer": {
+        "en": "Get from Explorer",
+        "ja": "Explorerから取得",
+        "ko": "탐색기에서 가져오기",
+        "zh_TW": "從檔案總管取得",
+        "zh_CN": "从资源管理器获取",
+    },
+    "window.no_explorer_title": {
+        "en": "No Explorer Window",
+        "ja": "Explorerウィンドウなし",
+        "ko": "탐색기 창 없음",
+        "zh_TW": "無檔案總管視窗",
+        "zh_CN": "无资源管理器窗口",
+    },
+    "window.no_explorer_msg": {
+        "en": "No Explorer window is open.",
+        "ja": "Explorerウィンドウが開いていません。",
+        "ko": "열려 있는 탐색기 창이 없습니다.",
+        "zh_TW": "沒有開啟的檔案總管視窗。",
+        "zh_CN": "没有打开的资源管理器窗口。",
     },
 
     # --- Settings ---

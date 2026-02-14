@@ -310,12 +310,11 @@ class HistorySection:
         # Calculate needed height (max 10 items)
         row_count = min(len(values), 10)
 
-        # Outer frame with padding to avoid macOS rounded-corner clipping
-        outer = tk.Frame(self._dropdown_win, bg="#e0e0e0", bd=1, relief=tk.SOLID)
-        outer.pack(fill=tk.BOTH, expand=True, padx=1, pady=1)
+        # Background matches listbox to blend with macOS rounded corners
+        self._dropdown_win.configure(bg="#ffffff")
 
-        list_frame = ttk.Frame(outer)
-        list_frame.pack(fill=tk.BOTH, expand=True, padx=2, pady=2)
+        list_frame = ttk.Frame(self._dropdown_win)
+        list_frame.pack(fill=tk.BOTH, expand=True, padx=8, pady=6)
 
         self._dropdown_listbox = tk.Listbox(
             list_frame, selectmode=tk.SINGLE, height=row_count,
@@ -346,14 +345,14 @@ class HistorySection:
                     self._dropdown_listbox.configure(
                         bg="#2b2b2b", fg="#ffffff", selectbackground="#1f6aa5",
                     )
-                    outer.configure(bg="#3b3b3b")
+                    self._dropdown_win.configure(bg="#2b2b2b")
             except Exception:
                 pass
 
         self._dropdown_listbox.bind("<<ListboxSelect>>", self._on_dropdown_select)
 
-        # Size and position
-        self._dropdown_win.geometry(f"{width}x{row_count * 20 + 24}+{x}+{y}")
+        # Size and position (extra space for padding + scrollbars)
+        self._dropdown_win.geometry(f"{width + 16}x{row_count * 20 + 28}+{x}+{y}")
         self._dropdown_win.update_idletasks()
 
         # Close on click outside

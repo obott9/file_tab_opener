@@ -310,11 +310,16 @@ class HistorySection:
         # Calculate needed height (max 10 items)
         row_count = min(len(values), 10)
 
-        list_frame = ttk.Frame(self._dropdown_win)
-        list_frame.pack(fill=tk.BOTH, expand=True)
+        # Outer frame with padding to avoid macOS rounded-corner clipping
+        outer = tk.Frame(self._dropdown_win, bg="#e0e0e0", bd=1, relief=tk.SOLID)
+        outer.pack(fill=tk.BOTH, expand=True, padx=1, pady=1)
+
+        list_frame = ttk.Frame(outer)
+        list_frame.pack(fill=tk.BOTH, expand=True, padx=2, pady=2)
 
         self._dropdown_listbox = tk.Listbox(
             list_frame, selectmode=tk.SINGLE, height=row_count,
+            borderwidth=0, highlightthickness=0,
         )
         scrollbar_y = ttk.Scrollbar(
             list_frame, orient=tk.VERTICAL, command=self._dropdown_listbox.yview,
@@ -341,13 +346,14 @@ class HistorySection:
                     self._dropdown_listbox.configure(
                         bg="#2b2b2b", fg="#ffffff", selectbackground="#1f6aa5",
                     )
+                    outer.configure(bg="#3b3b3b")
             except Exception:
                 pass
 
         self._dropdown_listbox.bind("<<ListboxSelect>>", self._on_dropdown_select)
 
         # Size and position
-        self._dropdown_win.geometry(f"{width}x{row_count * 20 + 20}+{x}+{y}")
+        self._dropdown_win.geometry(f"{width}x{row_count * 20 + 24}+{x}+{y}")
         self._dropdown_win.update_idletasks()
 
         # Close on click outside
@@ -377,7 +383,7 @@ class HistorySection:
         history = self.config.get_sorted_history()
         values: list[str] = []
         for entry in history:
-            prefix = "[*] " if entry.pinned else "    "
+            prefix = "\U0001f4cc " if entry.pinned else "   "
             values.append(f"{prefix}{entry.path}")
         return values
 
@@ -390,11 +396,11 @@ class HistorySection:
         text = self.entry.get().strip()
         if text == t("path.placeholder"):
             return ""
-        if text.startswith("[*] "):
-            text = text[4:]
-        elif text.startswith("    "):
-            text = text[4:]
-        return text
+        if text.startswith("\U0001f4cc "):
+            text = text[2:]
+        elif text.startswith("   "):
+            text = text[3:]
+        return text.strip()
 
     def _on_open(self) -> None:
         """Handle the Open button click."""

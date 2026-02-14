@@ -521,11 +521,12 @@ class TabGroupSection:
         else:
             self.path_entry = Entry(entry_frame)
             _setup_placeholder(self.path_entry, t("path.placeholder"))
+            # macOS: select all on focus (ttk only; CTkEntry handles this internally)
+            if IS_MAC:
+                self.path_entry.bind(
+                    "<FocusIn>", lambda e: e.widget.selection_range(0, tk.END), add="+",
+                )
         self.path_entry.pack(side=tk.LEFT, fill=tk.X, expand=True, padx=(0, 5))
-
-        # macOS: select all on focus (same reason as history combobox)
-        if IS_MAC:
-            self.path_entry.bind("<FocusIn>", lambda e: e.widget.selection_range(0, tk.END))
 
         # Enter key to add path
         self.path_entry.bind("<Return>", lambda e: self._on_add_path())

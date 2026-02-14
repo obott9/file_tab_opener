@@ -11,7 +11,10 @@ from unittest import mock
 import pytest
 
 from file_tab_opener import i18n
-from file_tab_opener.i18n import LANG_EN, LANG_JA, _STRINGS
+from file_tab_opener.i18n import (
+    LANG_EN, LANG_JA, LANG_KO, LANG_ZH_TW, LANG_ZH_CN,
+    SUPPORTED_LANGS, _STRINGS,
+)
 
 
 # ============================================================
@@ -43,9 +46,34 @@ class TestLanguageDetection:
         with mock.patch("locale.getlocale", return_value=("en_US", "UTF-8")):
             assert i18n.detect_system_language() == LANG_EN
 
+    def test_detect_korean(self) -> None:
+        """Korean locale should detect as 'ko'."""
+        with mock.patch("locale.getlocale", return_value=("ko_KR", "UTF-8")):
+            assert i18n.detect_system_language() == LANG_KO
+
+    def test_detect_zh_tw(self) -> None:
+        """Traditional Chinese (Taiwan) locale should detect as 'zh_TW'."""
+        with mock.patch("locale.getlocale", return_value=("zh_TW", "UTF-8")):
+            assert i18n.detect_system_language() == LANG_ZH_TW
+
+    def test_detect_zh_hk(self) -> None:
+        """Traditional Chinese (Hong Kong) locale should detect as 'zh_TW'."""
+        with mock.patch("locale.getlocale", return_value=("zh_HK", "UTF-8")):
+            assert i18n.detect_system_language() == LANG_ZH_TW
+
+    def test_detect_zh_cn(self) -> None:
+        """Simplified Chinese locale should detect as 'zh_CN'."""
+        with mock.patch("locale.getlocale", return_value=("zh_CN", "UTF-8")):
+            assert i18n.detect_system_language() == LANG_ZH_CN
+
+    def test_detect_zh_generic(self) -> None:
+        """Generic Chinese locale should default to Simplified."""
+        with mock.patch("locale.getlocale", return_value=("zh", "UTF-8")):
+            assert i18n.detect_system_language() == LANG_ZH_CN
+
     def test_detect_unknown_falls_back_to_en(self) -> None:
         """Unknown locale should fall back to English."""
-        with mock.patch("locale.getlocale", return_value=("ko_KR", "UTF-8")):
+        with mock.patch("locale.getlocale", return_value=("de_DE", "UTF-8")):
             assert i18n.detect_system_language() == LANG_EN
 
     def test_detect_none_locale(self) -> None:
@@ -71,6 +99,12 @@ class TestSetGetLanguage:
         """Setting a valid language should update the current language."""
         i18n.set_language(LANG_JA)
         assert i18n.get_language() == LANG_JA
+
+    def test_set_all_supported_languages(self) -> None:
+        """All supported languages should be settable."""
+        for lang in SUPPORTED_LANGS:
+            i18n.set_language(lang)
+            assert i18n.get_language() == lang
 
     def test_set_invalid_language_falls_back(self) -> None:
         """Setting an invalid language should fall back to English."""
@@ -103,6 +137,24 @@ class TestTranslation:
         result = i18n.t("history.label")
         assert result == "履歴:"
 
+    def test_korean_translation(self) -> None:
+        """t() should return Korean text when language is Korean."""
+        i18n.set_language(LANG_KO)
+        result = i18n.t("history.label")
+        assert result == "기록:"
+
+    def test_zh_tw_translation(self) -> None:
+        """t() should return Traditional Chinese text."""
+        i18n.set_language(LANG_ZH_TW)
+        result = i18n.t("history.label")
+        assert result == "歷史:"
+
+    def test_zh_cn_translation(self) -> None:
+        """t() should return Simplified Chinese text."""
+        i18n.set_language(LANG_ZH_CN)
+        result = i18n.t("history.label")
+        assert result == "历史:"
+
     def test_missing_key_returns_key(self) -> None:
         """Missing key should return the key itself."""
         result = i18n.t("nonexistent.key")
@@ -128,6 +180,18 @@ class TestTranslation:
         result = i18n.t("tab.duplicate_msg", name="テスト")
         assert "テスト" in result
 
+    def test_korean_placeholder(self) -> None:
+        """Korean text with placeholders should work correctly."""
+        i18n.set_language(LANG_KO)
+        result = i18n.t("tab.duplicate_msg", name="테스트")
+        assert "테스트" in result
+
+    def test_zh_tw_placeholder(self) -> None:
+        """Traditional Chinese text with placeholders should work correctly."""
+        i18n.set_language(LANG_ZH_TW)
+        result = i18n.t("tab.duplicate_msg", name="測試")
+        assert "測試" in result
+
 
 # ============================================================
 # Key completeness
@@ -137,15 +201,13 @@ class TestTranslation:
 class TestKeyCompleteness:
     """Verify that all i18n keys have translations for all supported languages."""
 
-    def test_all_keys_have_english(self) -> None:
-        """Every key must have an English translation."""
+    def test_all_keys_have_all_languages(self) -> None:
+        """Every key must have a translation for every supported language."""
         for key, translations in _STRINGS.items():
-            assert LANG_EN in translations, f"Key '{key}' missing English translation"
-
-    def test_all_keys_have_japanese(self) -> None:
-        """Every key must have a Japanese translation."""
-        for key, translations in _STRINGS.items():
-            assert LANG_JA in translations, f"Key '{key}' missing Japanese translation"
+            for lang in SUPPORTED_LANGS:
+                assert lang in translations, (
+                    f"Key '{key}' missing {lang} translation"
+                )
 
     def test_no_empty_translations(self) -> None:
         """No translation value should be empty."""

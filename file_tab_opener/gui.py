@@ -644,7 +644,10 @@ class TabGroupSection:
         self.open_btn.pack(fill=tk.X, pady=(5, 0), ipady=8)
 
     def _load_tabs_from_config(self) -> None:
-        """Restore tab groups from the config file."""
+        """Restore tab groups from the config file. Create a default tab if empty."""
+        if not self.config.data.tab_groups:
+            self.config.add_tab_group("Tab 1")
+            self.config.save()
         for group in self.config.data.tab_groups:
             self.tab_view.add_tab(group.name)
         names = self.tab_view.tab_names()

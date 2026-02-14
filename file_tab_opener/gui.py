@@ -144,6 +144,13 @@ class TabView:
         self._current = name
         self._update_selection()
 
+    def move_tab(self, old_index: int, new_index: int) -> None:
+        """Move a tab from old_index to new_index."""
+        if 0 <= old_index < len(self._names) and 0 <= new_index < len(self._names):
+            item = self._names.pop(old_index)
+            self._names.insert(new_index, item)
+            self._rebuild()
+
     def tab_names(self) -> list[str]:
         """Return the list of tab names."""
         return list(self._names)
@@ -343,6 +350,24 @@ def _strip_quotes(text: str) -> str:
     return text
 
 
+def _setup_placeholder(entry: ttk.Entry, placeholder: str) -> None:
+    """Add placeholder text to a ttk.Entry (grey hint when empty)."""
+    def _on_focus_in(_event: Any) -> None:
+        if entry.get() == placeholder:
+            entry.delete(0, tk.END)
+            entry.configure(foreground="")
+
+    def _on_focus_out(_event: Any) -> None:
+        if not entry.get():
+            entry.insert(0, placeholder)
+            entry.configure(foreground="grey")
+
+    entry.insert(0, placeholder)
+    entry.configure(foreground="grey")
+    entry.bind("<FocusIn>", _on_focus_in, add="+")
+    entry.bind("<FocusOut>", _on_focus_out, add="+")
+
+
 # ============================================================
 # Section 2: Tab group with listbox
 # ============================================================
@@ -386,6 +411,12 @@ class TabGroupSection:
         Button(
             tab_bar, text=t("tab.rename"), command=self._on_rename_tab, width=10
         ).pack(side=tk.LEFT, padx=2)
+        Button(
+            tab_bar, text=t("tab.move_left"), command=self._on_move_tab_left, width=3
+        ).pack(side=tk.LEFT, padx=(10, 0))
+        Button(
+            tab_bar, text=t("tab.move_right"), command=self._on_move_tab_right, width=3
+        ).pack(side=tk.LEFT, padx=2)
 
         # --- Tab view (tab names only, no expand) ---
         self.tab_view = TabView(self.frame, on_tab_changed=self._on_tab_changed)
@@ -427,12 +458,19 @@ class TabGroupSection:
         list_frame.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
 
         self.listbox = tk.Listbox(list_frame, selectmode=tk.SINGLE, height=10)
-        scrollbar = ttk.Scrollbar(
+        scrollbar_y = ttk.Scrollbar(
             list_frame, orient=tk.VERTICAL, command=self.listbox.yview
         )
-        self.listbox.configure(yscrollcommand=scrollbar.set)
-        self.listbox.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
-        scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
+        scrollbar_x = ttk.Scrollbar(
+            list_frame, orient=tk.HORIZONTAL, command=self.listbox.xview
+        )
+        self.listbox.configure(
+            yscrollcommand=scrollbar_y.set,
+            xscrollcommand=scrollbar_x.set,
+        )
+        scrollbar_y.pack(side=tk.RIGHT, fill=tk.Y)
+        self.listbox.pack(side=tk.TOP, fill=tk.BOTH, expand=True)
+        scrollbar_x.pack(side=tk.BOTTOM, fill=tk.X)
 
         # Adjust listbox theme when using customtkinter
         if CTK_AVAILABLE:
@@ -468,7 +506,11 @@ class TabGroupSection:
         entry_frame = Frame(self.frame)
         entry_frame.pack(fill=tk.X, pady=(0, 5))
 
-        self.path_entry = Entry(entry_frame)
+        if CTK_AVAILABLE:
+            self.path_entry = Entry(entry_frame, placeholder_text=t("path.placeholder"))
+        else:
+            self.path_entry = Entry(entry_frame)
+            _setup_placeholder(self.path_entry, t("path.placeholder"))
         self.path_entry.pack(side=tk.LEFT, fill=tk.X, expand=True, padx=(0, 5))
 
         # macOS: select all on focus (same reason as history combobox)
@@ -585,9 +627,38 @@ class TabGroupSection:
         self.tab_view.rename_tab(old_name, new_name)
         self.current_tab_name = new_name
 
+    def _on_move_tab_left(self) -> None:
+        """Move the current tab one position to the left."""
+        name = self.tab_view.get_current_tab_name()
+        if not name:
+            return
+        names = self.tab_view.tab_names()
+        idx = names.index(name)
+        if idx <= 0:
+            return
+        self.config.move_tab_group(idx, idx - 1)
+        self.config.save()
+        self.tab_view.move_tab(idx, idx - 1)
+
+    def _on_move_tab_right(self) -> None:
+        """Move the current tab one position to the right."""
+        name = self.tab_view.get_current_tab_name()
+        if not name:
+            return
+        names = self.tab_view.tab_names()
+        idx = names.index(name)
+        if idx >= len(names) - 1:
+            return
+        self.config.move_tab_group(idx, idx + 1)
+        self.config.save()
+        self.tab_view.move_tab(idx, idx + 1)
+
     def _on_add_path(self) -> None:
         """Handle the Add Path button click or Enter key in path entry."""
-        path = _strip_quotes(self.path_entry.get().strip())
+        raw = self.path_entry.get().strip()
+        if raw == t("path.placeholder"):
+            raw = ""
+        path = _strip_quotes(raw)
         if not path:
             return
         top = self.frame.winfo_toplevel()

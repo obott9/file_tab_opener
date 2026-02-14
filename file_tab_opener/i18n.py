@@ -93,6 +93,26 @@ _STRINGS: Final[dict[str, dict[str, str]]] = {
         "en": "Tab '{name}' already exists.",
         "ja": "\u30bf\u30d6 '{name}' \u306f\u65e2\u306b\u5b58\u5728\u3057\u307e\u3059\u3002",
     },
+    "tab.move_left": {
+        "en": "\u25c0",
+        "ja": "\u25c0",
+    },
+    "tab.move_right": {
+        "en": "\u25b6",
+        "ja": "\u25b6",
+    },
+    "tab.rename": {
+        "en": "Rename",
+        "ja": "名前変更",
+    },
+    "tab.rename_dialog_title": {
+        "en": "Rename Tab",
+        "ja": "タブ名変更",
+    },
+    "tab.rename_dialog_prompt": {
+        "en": "Enter new name:",
+        "ja": "新しいタブ名を入力:",
+    },
     "tab.delete_confirm_title": {
         "en": "Delete Tab",
         "ja": "\u30bf\u30d6\u524a\u9664",
@@ -143,6 +163,10 @@ _STRINGS: Final[dict[str, dict[str, str]]] = {
         "en": "Browse...",
         "ja": "\u53c2\u7167...",
     },
+    "path.placeholder": {
+        "en": "Enter folder path...",
+        "ja": "\u30d5\u30a9\u30eb\u30c0\u30d1\u30b9\u3092\u5165\u529b...",
+    },
     "path.invalid_title": {
         "en": "Invalid Path",
         "ja": "\u7121\u52b9\u306a\u30d1\u30b9",
@@ -168,6 +192,24 @@ _STRINGS: Final[dict[str, dict[str, str]]] = {
     "error.invalid_paths_msg": {
         "en": "The following paths will be skipped:\n{paths}",
         "ja": "\u4ee5\u4e0b\u306e\u30d1\u30b9\u306f\u30b9\u30ad\u30c3\u30d7\u3055\u308c\u307e\u3059:\n{paths}",
+    },
+
+    # --- Window geometry ---
+    "window.x": {
+        "en": "X:",
+        "ja": "X:",
+    },
+    "window.y": {
+        "en": "Y:",
+        "ja": "Y:",
+    },
+    "window.width": {
+        "en": "Width:",
+        "ja": "\u5e45:",
+    },
+    "window.height": {
+        "en": "Height:",
+        "ja": "\u9ad8\u3055:",
     },
 
     # --- Settings ---

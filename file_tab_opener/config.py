@@ -58,6 +58,10 @@ class TabGroup:
 
     name: str
     paths: list[str] = field(default_factory=list)
+    window_x: int | None = None
+    window_y: int | None = None
+    window_width: int | None = None
+    window_height: int | None = None
 
 
 @dataclass
@@ -109,7 +113,14 @@ class ConfigManager:
                 for e in self.data.history
             ],
             "tab_groups": [
-                {"name": g.name, "paths": list(g.paths)}
+                {
+                    "name": g.name,
+                    "paths": list(g.paths),
+                    "window_x": g.window_x,
+                    "window_y": g.window_y,
+                    "window_width": g.window_width,
+                    "window_height": g.window_height,
+                }
                 for g in self.data.tab_groups
             ],
             "window_geometry": self.data.window_geometry,
@@ -135,6 +146,10 @@ class ConfigManager:
             tab_groups.append(TabGroup(
                 name=item.get("name", ""),
                 paths=list(paths),
+                window_x=item.get("window_x"),
+                window_y=item.get("window_y"),
+                window_width=item.get("window_width"),
+                window_height=item.get("window_height"),
             ))
 
         return AppConfig(
@@ -149,8 +164,12 @@ class ConfigManager:
     def add_history(self, path: str) -> None:
         """Add a path to history. Updates existing entry or appends a new one."""
         clean = path.strip()
-        if clean.startswith('"') and clean.endswith('"') and len(clean) >= 2:
-            clean = clean[1:-1]
+        # Strip surrounding quotes only if the unquoted path differs
+        # (i.e., don't strip if the raw path itself is a valid normpath)
+        for quote in ('"', "'"):
+            if clean.startswith(quote) and clean.endswith(quote) and len(clean) >= 2:
+                clean = clean[1:-1]
+                break
         normalized = os.path.normpath(clean)
         for entry in self.data.history:
             if os.path.normpath(entry.path) == normalized:
@@ -250,6 +269,13 @@ class ConfigManager:
         group = self.get_tab_group(group_name)
         if group and 0 <= index < len(group.paths):
             group.paths.pop(index)
+
+    def move_tab_group(self, old_index: int, new_index: int) -> None:
+        """Reorder a tab group."""
+        groups = self.data.tab_groups
+        if 0 <= old_index < len(groups) and 0 <= new_index < len(groups):
+            item = groups.pop(old_index)
+            groups.insert(new_index, item)
 
     def move_path_in_group(self, group_name: str, old_index: int, new_index: int) -> None:
         """Reorder a path within a tab group."""

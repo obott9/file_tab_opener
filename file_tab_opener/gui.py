@@ -8,6 +8,7 @@ All user-facing text is provided via the i18n module.
 from __future__ import annotations
 
 import os
+import platform
 import threading
 import tkinter as tk
 import tkinter.ttk as ttk
@@ -15,6 +16,8 @@ from collections.abc import Callable
 from pathlib import Path
 from tkinter import filedialog, messagebox, simpledialog
 from typing import Any
+
+IS_MAC = platform.system() == "Darwin"
 
 from file_tab_opener.config import ConfigManager
 from file_tab_opener import i18n
@@ -118,6 +121,16 @@ class TabView:
         self._names.remove(name)
         if self._current == name:
             self._current = self._names[0] if self._names else None
+        self._rebuild()
+
+    def rename_tab(self, old_name: str, new_name: str) -> None:
+        """Rename a tab."""
+        if old_name not in self._names or new_name in self._names:
+            return
+        idx = self._names.index(old_name)
+        self._names[idx] = new_name
+        if self._current == old_name:
+            self._current = new_name
         self._rebuild()
 
     def get_current_tab_name(self) -> str | None:
@@ -231,6 +244,13 @@ class HistorySection:
         self.combobox = ttk.Combobox(self.frame, width=50)
         self.combobox.pack(side=tk.LEFT, fill=tk.X, expand=True, padx=(0, 5))
 
+        # macOS: clicking a combobox places the cursor at the end (text NOT selected).
+        # Windows: clicking a combobox auto-selects all text.
+        # Without this fix, pasting on macOS appends to existing text instead of
+        # replacing it, causing accidental path duplication.
+        if IS_MAC:
+            self.combobox.bind("<FocusIn>", lambda e: e.widget.selection_range(0, tk.END))
+
         Button(self.frame, text=t("history.open"), command=self._on_open, width=6).pack(
             side=tk.LEFT, padx=2
         )
@@ -251,20 +271,17 @@ class HistorySection:
         self.combobox["values"] = values
 
     def _get_selected_path(self) -> str:
-        """Extract the path from combobox text (strip prefix and surrounding double quotes)."""
+        """Extract the raw path from combobox text (strip prefix only)."""
         text = self.combobox.get().strip()
         if text.startswith("[*] "):
             text = text[4:]
         elif text.startswith("    "):
             text = text[4:]
-        # Strip surrounding double quotes from Explorer's "Copy path"
-        if text.startswith('"') and text.endswith('"') and len(text) >= 2:
-            text = text[1:-1]
         return text
 
     def _on_open(self) -> None:
         """Handle the Open button click."""
-        path = self._get_selected_path()
+        path = _strip_quotes(self._get_selected_path())
         if not path:
             return
         expanded = os.path.expanduser(path)
@@ -272,7 +289,6 @@ class HistorySection:
             self.config.add_history(expanded)
             self.config.save()
             self._refresh_combobox()
-            # Update displayed text to the resolved path (without quotes)
             self.combobox.set(expanded)
             self.on_open_folder(expanded)
         else:
@@ -315,8 +331,26 @@ class HistorySection:
 
 
 # ============================================================
+# Path resolution helper
+# ============================================================
+
+
+def _strip_quotes(text: str) -> str:
+    """Strip matching surrounding quotes (shell quoting artifacts)."""
+    for quote in ('"', "'"):
+        if text.startswith(quote) and text.endswith(quote) and len(text) >= 2:
+            return text[1:-1]
+    return text
+
+
+# ============================================================
 # Section 2: Tab group with listbox
 # ============================================================
+
+
+# Finder/Explorer minimum window size (macOS Finder enforces these)
+FINDER_MIN_WIDTH = 528
+FINDER_MIN_HEIGHT = 308
 
 
 class TabGroupSection:
@@ -326,7 +360,7 @@ class TabGroupSection:
         self,
         parent: Any,
         config: ConfigManager,
-        on_open_tabs: Callable[[list[str]], None],
+        on_open_tabs: Callable[[list[str], tuple[int, int, int, int] | None], None],
     ) -> None:
         self.config = config
         self.on_open_tabs = on_open_tabs
@@ -349,10 +383,40 @@ class TabGroupSection:
         Button(
             tab_bar, text=t("tab.delete"), command=self._on_delete_tab, width=10
         ).pack(side=tk.LEFT, padx=2)
+        Button(
+            tab_bar, text=t("tab.rename"), command=self._on_rename_tab, width=10
+        ).pack(side=tk.LEFT, padx=2)
 
         # --- Tab view (tab names only, no expand) ---
         self.tab_view = TabView(self.frame, on_tab_changed=self._on_tab_changed)
         self.tab_view.pack(fill=tk.X)
+
+        # --- Window geometry settings (per-tab) ---
+        geom_frame = Frame(self.frame)
+        geom_frame.pack(fill=tk.X, pady=(5, 0))
+
+        geom_entry_width = 70 if CTK_AVAILABLE else 7
+
+        Label(geom_frame, text=t("window.x")).pack(side=tk.LEFT, padx=(0, 2))
+        self._geom_x_entry = Entry(geom_frame, width=geom_entry_width)
+        self._geom_x_entry.pack(side=tk.LEFT, padx=(0, 8))
+
+        Label(geom_frame, text=t("window.y")).pack(side=tk.LEFT, padx=(0, 2))
+        self._geom_y_entry = Entry(geom_frame, width=geom_entry_width)
+        self._geom_y_entry.pack(side=tk.LEFT, padx=(0, 8))
+
+        Label(geom_frame, text=t("window.width")).pack(side=tk.LEFT, padx=(0, 2))
+        self._geom_w_entry = Entry(geom_frame, width=geom_entry_width)
+        self._geom_w_entry.pack(side=tk.LEFT, padx=(0, 8))
+
+        Label(geom_frame, text=t("window.height")).pack(side=tk.LEFT, padx=(0, 2))
+        self._geom_h_entry = Entry(geom_frame, width=geom_entry_width)
+        self._geom_h_entry.pack(side=tk.LEFT)
+
+        for entry in (self._geom_x_entry, self._geom_y_entry,
+                       self._geom_w_entry, self._geom_h_entry):
+            entry.bind("<FocusOut>", lambda e: self._save_geometry())
+            entry.bind("<Return>", lambda e: self._save_geometry())
 
         # --- Content area (listbox + buttons) ---
         content = Frame(self.frame)
@@ -407,6 +471,10 @@ class TabGroupSection:
         self.path_entry = Entry(entry_frame)
         self.path_entry.pack(side=tk.LEFT, fill=tk.X, expand=True, padx=(0, 5))
 
+        # macOS: select all on focus (same reason as history combobox)
+        if IS_MAC:
+            self.path_entry.bind("<FocusIn>", lambda e: e.widget.selection_range(0, tk.END))
+
         # Enter key to add path
         self.path_entry.bind("<Return>", lambda e: self._on_add_path())
 
@@ -425,11 +493,14 @@ class TabGroupSection:
             self.tab_view.set_current_tab(names[0])
             self.current_tab_name = names[0]
             self._refresh_listbox()
+            self._load_geometry()
 
     def _on_tab_changed(self, tab_name: str) -> None:
         """Handle tab selection change."""
+        self._save_geometry()
         self.current_tab_name = tab_name
         self._refresh_listbox()
+        self._load_geometry()
 
     def _refresh_listbox(self) -> None:
         """Update the listbox with paths from the current tab group."""
@@ -487,11 +558,36 @@ class TabGroupSection:
                 self.current_tab_name = None
             self._refresh_listbox()
 
+    def _on_rename_tab(self) -> None:
+        """Handle the Rename Tab button click."""
+        old_name = self.tab_view.get_current_tab_name()
+        if not old_name:
+            return
+        top = self.frame.winfo_toplevel()
+        new_name = simpledialog.askstring(
+            t("tab.rename_dialog_title"),
+            t("tab.rename_dialog_prompt"),
+            initialvalue=old_name,
+            parent=top,
+        )
+        if not new_name or not new_name.strip() or new_name.strip() == old_name:
+            return
+        new_name = new_name.strip()
+        if self.config.get_tab_group(new_name):
+            messagebox.showwarning(
+                t("tab.duplicate_title"),
+                t("tab.duplicate_msg", name=new_name),
+                parent=top,
+            )
+            return
+        self.config.rename_tab_group(old_name, new_name)
+        self.config.save()
+        self.tab_view.rename_tab(old_name, new_name)
+        self.current_tab_name = new_name
+
     def _on_add_path(self) -> None:
         """Handle the Add Path button click or Enter key in path entry."""
-        path = self.path_entry.get().strip()
-        if path.startswith('"') and path.endswith('"') and len(path) >= 2:
-            path = path[1:-1]
+        path = _strip_quotes(self.path_entry.get().strip())
         if not path:
             return
         top = self.frame.winfo_toplevel()
@@ -555,6 +651,86 @@ class TabGroupSection:
             self.path_entry.delete(0, tk.END)
             self.path_entry.insert(0, normalized)
 
+    def _load_geometry(self) -> None:
+        """Load window geometry values from the current tab group into the entry fields."""
+        for entry in (self._geom_x_entry, self._geom_y_entry,
+                       self._geom_w_entry, self._geom_h_entry):
+            entry.delete(0, tk.END)
+        if not self.current_tab_name:
+            return
+        group = self.config.get_tab_group(self.current_tab_name)
+        if not group:
+            return
+        if group.window_x is not None:
+            self._geom_x_entry.insert(0, str(group.window_x))
+        if group.window_y is not None:
+            self._geom_y_entry.insert(0, str(group.window_y))
+        if group.window_width is not None:
+            self._geom_w_entry.insert(0, str(group.window_width))
+        if group.window_height is not None:
+            self._geom_h_entry.insert(0, str(group.window_height))
+
+    def _save_geometry(self) -> None:
+        """Save window geometry values from the entry fields to the current tab group.
+
+        Clamps width and height to Finder/Explorer minimum values.
+        """
+        if not self.current_tab_name:
+            return
+        group = self.config.get_tab_group(self.current_tab_name)
+        if not group:
+            return
+        group.window_x = self._parse_int(self._geom_x_entry.get())
+        group.window_y = self._parse_int(self._geom_y_entry.get())
+        group.window_width = self._clamp_min(
+            self._parse_int(self._geom_w_entry.get()), FINDER_MIN_WIDTH
+        )
+        group.window_height = self._clamp_min(
+            self._parse_int(self._geom_h_entry.get()), FINDER_MIN_HEIGHT
+        )
+        # Update entry fields to show clamped values
+        self._update_entry(self._geom_w_entry, group.window_width)
+        self._update_entry(self._geom_h_entry, group.window_height)
+        self.config.save()
+
+    @staticmethod
+    def _parse_int(value: str) -> int | None:
+        """Parse an integer from a string. Returns None if invalid or empty."""
+        try:
+            return int(value.strip())
+        except (ValueError, TypeError):
+            return None
+
+    @staticmethod
+    def _clamp_min(value: int | None, minimum: int) -> int | None:
+        """Clamp a value to a minimum. Returns None if value is None."""
+        if value is None:
+            return None
+        return max(value, minimum)
+
+    @staticmethod
+    def _update_entry(entry: Any, value: int | None) -> None:
+        """Update an entry widget's text without triggering extra events."""
+        current = entry.get().strip()
+        new_text = str(value) if value is not None else ""
+        if current != new_text:
+            entry.delete(0, tk.END)
+            if new_text:
+                entry.insert(0, new_text)
+
+    def _get_window_rect(self) -> tuple[int, int, int, int] | None:
+        """Return the window rect for the current tab group, or None if incomplete."""
+        self._save_geometry()
+        if not self.current_tab_name:
+            return None
+        group = self.config.get_tab_group(self.current_tab_name)
+        if not group:
+            return None
+        if (group.window_x is not None and group.window_y is not None
+                and group.window_width is not None and group.window_height is not None):
+            return (group.window_x, group.window_y, group.window_width, group.window_height)
+        return None
+
     def _on_open_as_tabs(self) -> None:
         """Handle the Open as Tabs button click."""
         if self._opening:
@@ -572,7 +748,7 @@ class TabGroupSection:
             )
             return
         self._opening = True
-        self.on_open_tabs(group.paths)
+        self.on_open_tabs(group.paths, self._get_window_rect())
         # Delay flag reset to prevent double-clicks
         self.frame.after(2000, self._reset_opening_flag)
 
@@ -707,7 +883,9 @@ class MainWindow:
         """Open a single folder."""
         self.opener.open_single_folder(path)
 
-    def _open_folders_as_tabs(self, paths: list[str]) -> None:
+    def _open_folders_as_tabs(
+        self, paths: list[str], window_rect: tuple[int, int, int, int] | None = None,
+    ) -> None:
         """Open multiple folders as tabs (runs in a worker thread)."""
         valid, invalid = self.opener.validate_paths(paths)
         if invalid:
@@ -733,6 +911,7 @@ class MainWindow:
                     ),
                 ),
                 timeout=timeout,
+                window_rect=window_rect,
             )
 
         threading.Thread(target=do_open, daemon=True).start()

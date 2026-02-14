@@ -676,6 +676,7 @@ class TabGroupSection:
         if group:
             for path in group.paths:
                 self.listbox.insert(tk.END, path)
+        self.listbox.xview_moveto(0)
 
     def _on_add_tab(self) -> None:
         """Handle the Add Tab button click."""

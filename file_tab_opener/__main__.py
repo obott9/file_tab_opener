@@ -8,6 +8,7 @@ Entry point. Supports both `python -m file_tab_opener` and console_scripts.
 from __future__ import annotations
 
 import logging
+import logging.handlers
 import os
 import platform
 import sys
@@ -43,7 +44,9 @@ def _setup_logging() -> None:
 
         os.makedirs(log_dir, exist_ok=True)
         log_path = os.path.join(log_dir, "debug.log")
-        file_handler = logging.FileHandler(log_path, encoding="utf-8", mode="w")
+        file_handler = logging.handlers.RotatingFileHandler(
+            log_path, encoding="utf-8", maxBytes=1_000_000, backupCount=3,
+        )
         file_handler.setLevel(logging.DEBUG)
         file_handler.setFormatter(logging.Formatter(log_fmt, datefmt=date_fmt))
         root_logger.addHandler(file_handler)

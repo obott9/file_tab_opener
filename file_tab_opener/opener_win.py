@@ -368,27 +368,55 @@ def _open_tabs_pywinauto_uia(
             pwa_keyboard.send_keys("^t")
             time.sleep(0.8)
 
-            # Ctrl+L: focus the address bar
-            pwa_keyboard.send_keys("^l")
+            # Set path with retry: Ctrl+L -> input -> verify -> Enter
+            path_set = False
+            for attempt in range(3):
+                # Ctrl+L: focus the address bar
+                pwa_keyboard.send_keys("^l")
 
-            # Wait for the address bar Edit to be ready
-            try:
-                addr_edit.wait("ready", timeout=3)
-                log.debug("Address bar Edit ready")
-            except Exception:
-                log.debug("Address bar wait failed, waiting 0.5s")
-                time.sleep(0.5)
+                # Wait for the address bar Edit to be ready
+                try:
+                    addr_edit.wait("ready", timeout=3)
+                    log.debug("Address bar Edit ready (attempt %d)", attempt + 1)
+                except Exception:
+                    log.debug("Address bar wait failed (attempt %d), waiting 0.5s", attempt + 1)
+                    time.sleep(0.5)
 
-            # Set path via UIA ValuePattern
-            try:
-                addr_edit.set_edit_text(norm_path)
-                log.debug("Path set via UIA ValuePattern")
-            except Exception as uia_e:
-                # Fallback to keyboard input if UIA fails
-                log.debug("UIA input failed (%s), falling back to keyboard", uia_e)
-                pwa_keyboard.send_keys(
-                    norm_path, with_spaces=True, pause=0.01
-                )
+                # Set path via UIA ValuePattern
+                try:
+                    addr_edit.set_edit_text(norm_path)
+                    log.debug("Path set via UIA ValuePattern (attempt %d)", attempt + 1)
+                except Exception as uia_e:
+                    # Fallback to keyboard input if UIA fails
+                    log.debug("UIA input failed (%s), falling back to keyboard", uia_e)
+                    pwa_keyboard.send_keys(
+                        norm_path, with_spaces=True, pause=0.01
+                    )
+
+                time.sleep(0.15)
+
+                # Verify the address bar contains the expected path
+                try:
+                    current_text = addr_edit.get_value()
+                    if current_text and os.path.normpath(current_text) == norm_path:
+                        log.debug("Path verified OK: %s", current_text)
+                        path_set = True
+                        break
+                    else:
+                        log.warning(
+                            "Path mismatch (attempt %d): expected=%s, got=%s",
+                            attempt + 1, norm_path, current_text,
+                        )
+                except Exception as ve:
+                    log.debug("Could not verify path (attempt %d): %s", attempt + 1, ve)
+                    # If verification fails, assume it's set and proceed
+                    path_set = True
+                    break
+
+                time.sleep(0.3)
+
+            if not path_set:
+                log.warning("Path set failed after retries, proceeding anyway: %s", norm_path)
 
             time.sleep(0.1)
             # Press Enter to navigate

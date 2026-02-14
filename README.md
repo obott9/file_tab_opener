@@ -9,6 +9,7 @@ Instead of opening folders one by one, register them in a named tab group and op
 ## Features
 
 - **Tab Group Management** — Create named groups (e.g. "Work", "Personal") and assign folder paths to each
+- **Tab Group Copy** — Duplicate an existing tab group with one click
 - **One-Click Open** — Open all folders in a group as tabs in a single Explorer/Finder window
 - **History with Pin** — Recently opened folders are tracked; pin frequently used ones
 - **Cross-Platform** — Windows (Explorer tabs, Win 11+) and macOS (Finder tabs)
@@ -73,7 +74,7 @@ python -m file_tab_opener
 
 Three-tier fallback for maximum compatibility:
 
-1. **pywinauto UIA** — Opens a new Explorer window, connects via UI Automation, sends Ctrl+T for new tabs, and sets the address bar text via UIA ValuePattern. Most reliable method.
+1. **pywinauto UIA** — Opens a new Explorer window, connects via UI Automation, sends Ctrl+T for new tabs, and sets the address bar text via UIA ValuePattern. Includes retry with verification to ensure correct navigation. Most reliable method.
 2. **ctypes SendInput** — Same keystroke approach using raw Win32 `SendInput` API. No external dependencies, but less reliable due to focus and timing issues.
 3. **Separate windows** — Falls back to opening each folder in its own Explorer window via `subprocess`.
 
@@ -102,7 +103,7 @@ Settings are stored in a JSON file:
 
 ## Logging
 
-The app outputs status messages to the terminal (`INFO` level) and writes detailed logs to a file (`DEBUG` level).
+The app outputs status messages to the terminal (`INFO` level) and writes detailed logs to a file (`DEBUG` level). Log files are automatically rotated (1 MB max, 3 backups kept).
 
 | Output | Level | Purpose |
 |--------|-------|---------|

@@ -24,6 +24,7 @@ from file_tab_opener import i18n
 from file_tab_opener.i18n import t, SUPPORTED_LANGS, LANG_NAMES
 
 IS_MAC = platform.system() == "Darwin"
+IS_WIN = platform.system() == "Windows"
 
 log = logging.getLogger(__name__)
 
@@ -556,6 +557,11 @@ class TabGroupSection:
                 geom_frame, text=t("window.get_from_finder"),
                 command=self._on_get_finder_bounds, width=14,
             ).pack(side=tk.LEFT)
+        elif IS_WIN:
+            Button(
+                geom_frame, text=t("window.get_from_explorer"),
+                command=self._on_get_explorer_bounds, width=18,
+            ).pack(side=tk.LEFT)
 
         for entry in (self._geom_x_entry, self._geom_y_entry,
                        self._geom_w_entry, self._geom_h_entry):
@@ -875,6 +881,37 @@ class TabGroupSection:
             messagebox.showinfo(
                 t("window.no_finder_title"),
                 t("window.no_finder_msg"),
+                parent=self.frame.winfo_toplevel(),
+            )
+            return
+
+        for entry, val in [
+            (self._geom_x_entry, x), (self._geom_y_entry, y),
+            (self._geom_w_entry, w), (self._geom_h_entry, h),
+        ]:
+            entry.delete(0, tk.END)
+            entry.insert(0, str(val))
+        self._save_geometry()
+
+    def _on_get_explorer_bounds(self) -> None:
+        """Get the frontmost Explorer window's bounds and fill geometry fields."""
+        try:
+            from file_tab_opener.opener_win import get_frontmost_explorer_rect
+
+            rect = get_frontmost_explorer_rect()
+            if rect is None:
+                messagebox.showinfo(
+                    t("window.no_explorer_title"),
+                    t("window.no_explorer_msg"),
+                    parent=self.frame.winfo_toplevel(),
+                )
+                return
+            x, y, w, h = rect
+        except Exception as e:
+            log.warning("Failed to get Explorer bounds: %s", e)
+            messagebox.showinfo(
+                t("window.no_explorer_title"),
+                t("window.no_explorer_msg"),
                 parent=self.frame.winfo_toplevel(),
             )
             return

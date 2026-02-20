@@ -1,6 +1,6 @@
 # File Tab Opener
 
-[日本語版 README はこちら](README_ja.md)
+**English** | [日本語](README_ja.md) | [한국어](README_ko.md) | [繁體中文](README_zh_TW.md) | [简体中文](README_zh_CN.md)
 
 A GUI tool for opening multiple folders as tabs in a single **Windows Explorer** or **macOS Finder** window.
 

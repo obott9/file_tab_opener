@@ -1,6 +1,6 @@
 # File Tab Opener
 
-[English README](README.md)
+[English](README.md) | **日本語** | [한국어](README_ko.md) | [繁體中文](README_zh_TW.md) | [简体中文](README_zh_CN.md)
 
 複数のフォルダを **Windows Explorer** または **macOS Finder** の1つのウィンドウにタブとして一括で開くGUIツールです。
 

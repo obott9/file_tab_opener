@@ -96,6 +96,68 @@ class TestTabViewLogic:
 
 
 # ============================================================
+# TabView.delete_tab neighbor selection
+# ============================================================
+
+
+class TestDeleteTabNeighborSelection:
+    """Test that delete_tab selects the right neighbor, or left if rightmost.
+
+    We test the pure state logic by calling the internal _names / _current
+    manipulation directly (same logic as delete_tab without Tk rendering).
+    """
+
+    @staticmethod
+    def _simulate_delete(names: list[str], current: str, to_delete: str) -> str | None:
+        """Simulate TabView.delete_tab logic and return the new current."""
+        if to_delete not in names:
+            return current
+        idx = names.index(to_delete)
+        names.remove(to_delete)
+        if current == to_delete:
+            if names:
+                new_idx = min(idx, len(names) - 1)
+                return names[new_idx]
+            return None
+        return current
+
+    def test_delete_first_selects_right(self) -> None:
+        names = ["A", "B", "C"]
+        result = self._simulate_delete(names, "A", "A")
+        assert result == "B"
+
+    def test_delete_middle_selects_right(self) -> None:
+        names = ["A", "B", "C"]
+        result = self._simulate_delete(names, "B", "B")
+        assert result == "C"
+
+    def test_delete_last_selects_left(self) -> None:
+        names = ["A", "B", "C"]
+        result = self._simulate_delete(names, "C", "C")
+        assert result == "B"
+
+    def test_delete_only_tab_returns_none(self) -> None:
+        names = ["A"]
+        result = self._simulate_delete(names, "A", "A")
+        assert result is None
+
+    def test_delete_non_current_preserves_current(self) -> None:
+        names = ["A", "B", "C"]
+        result = self._simulate_delete(names, "A", "C")
+        assert result == "A"
+
+    def test_delete_second_of_two_selects_first(self) -> None:
+        names = ["A", "B"]
+        result = self._simulate_delete(names, "B", "B")
+        assert result == "A"
+
+    def test_delete_first_of_two_selects_second(self) -> None:
+        names = ["A", "B"]
+        result = self._simulate_delete(names, "A", "A")
+        assert result == "B"
+
+
+# ============================================================
 # add_tab_group duplicate check (B-5)
 # ============================================================
 

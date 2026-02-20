@@ -148,12 +148,22 @@ class TabView:
         self._rebuild()
 
     def delete_tab(self, name: str) -> None:
-        """Delete a tab by name."""
+        """Delete a tab by name.
+
+        After deletion, select the right neighbor; if the deleted tab was
+        the last one, select the left neighbor instead.
+        """
         if name not in self._names:
             return
+        idx = self._names.index(name)
         self._names.remove(name)
         if self._current == name:
-            self._current = self._names[0] if self._names else None
+            if self._names:
+                # Right neighbor (same index) or left neighbor (idx-1)
+                new_idx = min(idx, len(self._names) - 1)
+                self._current = self._names[new_idx]
+            else:
+                self._current = None
         self._rebuild()
 
     def rename_tab(self, old_name: str, new_name: str) -> None:

@@ -278,13 +278,13 @@ class TabGroupSection:
             self.config.delete_tab_group(name)
             self.config.save()
             self.tab_view.delete_tab(name)
-            remaining = self.tab_view.tab_names()
-            if remaining:
-                self.tab_view.set_current_tab(remaining[0])
-                self.current_tab_name = remaining[0]
-            else:
-                self.current_tab_name = None
+            # delete_tab selects the right neighbor (or left if rightmost)
+            new_current = self.tab_view.get_current_tab_name()
+            if new_current:
+                self.tab_view.set_current_tab(new_current)
+            self.current_tab_name = new_current
             self._refresh_listbox()
+            self._load_geometry()
 
     def _on_rename_tab(self) -> None:
         """Handle the Rename Tab button click."""

@@ -160,12 +160,19 @@ file_tab_opener/
 │   ├── __main__.py          # Entry point
 │   ├── config.py            # Configuration management
 │   ├── i18n.py              # Internationalization (5 languages)
-│   ├── gui.py               # GUI (customtkinter / tkinter)
+│   ├── gui.py               # Re-export module (backward compatibility)
+│   ├── widgets.py           # Widget abstraction (CTk / ttk) + TabView
+│   ├── history.py           # History section UI
+│   ├── tab_group.py         # Tab group section UI
+│   ├── main_window.py       # Main window composition
 │   ├── opener_win.py        # Windows Explorer tab opener
 │   └── opener_mac.py        # macOS Finder tab opener
 └── tests/
-    ├── test_config.py       # Config module tests (40 tests)
-    └── test_i18n.py         # i18n module tests (28 tests)
+    ├── test_config.py       # Config module tests
+    ├── test_i18n.py         # i18n module tests
+    ├── test_gui.py          # GUI logic tests
+    ├── test_opener_mac.py   # macOS opener tests
+    └── test_opener_win.py   # Windows opener tests
 ```
 
 ## License

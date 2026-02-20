@@ -132,16 +132,16 @@ class MainWindow:
 
     def _on_language_changed(self, event: Any) -> None:
         """Handle language switch from the combobox."""
-        selected_name = self._lang_combo.get()
-        for code, name in LANG_NAMES.items():
-            if name == selected_name:
-                if code != i18n.get_language():
-                    i18n.set_language(code)
-                    self.config.data.settings["language"] = code
-                    self.config.save()
-                    self.root.title(t("app.title"))
-                    self._build_content()
-                return
+        idx = self._lang_combo.current()
+        if idx < 0 or idx >= len(SUPPORTED_LANGS):
+            return
+        code = SUPPORTED_LANGS[idx]
+        if code != i18n.get_language():
+            i18n.set_language(code)
+            self.config.data.settings["language"] = code
+            self.config.save()
+            self.root.title(t("app.title"))
+            self._build_content()
 
     def _get_timeout(self) -> float:
         """Get the current timeout setting in seconds."""
@@ -186,8 +186,16 @@ class MainWindow:
                     timeout=timeout,
                     window_rect=window_rect,
                 )
+            except Exception as e:
+                self.root.after(
+                    0,
+                    lambda: messagebox.showerror(
+                        t("error.title"),
+                        str(e),
+                        parent=self.root,
+                    ),
+                )
             finally:
-                # Reset _opening flag on the main thread when thread completes (A-5)
                 self.root.after(0, self._reset_tab_opening_flag)
 
         threading.Thread(target=do_open, daemon=True).start()

@@ -147,6 +147,34 @@ pyinstaller --noconfirm --onedir --windowed \
 
 > **注意：** 各 OS 的建構必須在該 OS 上進行。macOS 無法產生 Windows 的 `.exe`，反之亦然。
 
+## 專案結構
+
+```
+file_tab_opener/
+├── pyproject.toml           # 套件設定
+├── LICENSE                  # MIT 授權
+├── README.md                # 英文 README
+├── README_zh_TW.md          # 本檔案
+├── file_tab_opener/         # 原始碼套件
+│   ├── __init__.py
+│   ├── __main__.py          # 進入點
+│   ├── config.py            # 設定檔管理
+│   ├── i18n.py              # 國際化（5 種語言）
+│   ├── gui.py               # 重新匯出模組（向下相容）
+│   ├── widgets.py           # 元件抽象化（CTk / ttk）+ TabView
+│   ├── history.py           # 歷史區段 UI
+│   ├── tab_group.py         # 分頁群組區段 UI
+│   ├── main_window.py       # 主視窗組成
+│   ├── opener_win.py        # Windows 檔案總管分頁開啟
+│   └── opener_mac.py        # macOS Finder 分頁開啟
+└── tests/
+    ├── test_config.py       # 設定模組測試
+    ├── test_i18n.py         # i18n 模組測試
+    ├── test_gui.py          # GUI 邏輯測試
+    ├── test_opener_mac.py   # macOS opener 測試
+    └── test_opener_win.py   # Windows opener 測試
+```
+
 ## 授權
 
 [MIT License](LICENSE) © 2026 obott9

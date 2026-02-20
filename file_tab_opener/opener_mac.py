@@ -24,6 +24,29 @@ _APPLESCRIPT_TIMEOUT = 30  # osascript execution timeout (seconds)
 _ACCESSIBILITY_KEYWORDS = ("assistive", "アクセシビリティ", "辅助功能", "보조")
 
 
+def _esc_applescript(p: str) -> str:
+    """Escape backslashes and double quotes for AppleScript string literals."""
+    return p.replace("\\", "\\\\").replace('"', '\\"')
+
+
+def _build_open_window_script(
+    path: str,
+    window_rect: tuple[int, int, int, int] | None = None,
+) -> str:
+    """Build AppleScript to open a single folder in a new Finder window."""
+    escaped = _esc_applescript(path)
+    script = (
+        'tell application "Finder"\n'
+        '  activate\n'
+        f'  make new Finder window to POSIX file "{escaped}" as alias\n'
+    )
+    if window_rect:
+        x, y, w, h = window_rect
+        script += f'  set bounds of front Finder window to {{{x}, {y}, {x + w}, {y + h}}}\n'
+    script += 'end tell'
+    return script
+
+
 def validate_paths(paths: list[str]) -> tuple[list[str], list[str]]:
     """Validate paths. Returns (valid_paths, invalid_paths)."""
     valid: list[str] = []
@@ -49,16 +72,9 @@ def open_single_folder(
     """
     try:
         expanded = os.path.expanduser(path)
-        escaped = expanded.replace("\\", "\\\\").replace('"', '\\"')
-        script = (
-            'tell application "Finder"\n'
-            '  activate\n'
-            f'  make new Finder window to POSIX file "{escaped}" as alias\n'
-        )
-        if window_rect:
-            x, y, w, h = window_rect
-            script += f'  set bounds of front Finder window to {{{x}, {y}, {x + w}, {y + h}}}\n'
-        script += 'end tell'
+        script = _build_open_window_script(expanded, window_rect)
+        # Fire-and-forget: Popen is intentional here. We don't need to wait
+        # for the Finder window to appear before returning to the caller.
         subprocess.Popen(["osascript", "-e", script], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
         return True
     except OSError:
@@ -119,16 +135,11 @@ def _build_applescript(
     window_rect: tuple[int, int, int, int] | None = None,
 ) -> str:
     """Build an AppleScript to open folders as Finder tabs."""
-
-    def esc(p: str) -> str:
-        """Escape backslashes and double quotes for AppleScript strings."""
-        return p.replace("\\", "\\\\").replace('"', '\\"')
-
     lines: list[str] = []
     # First path: always create a new Finder window (not reuse existing)
     lines.append('tell application "Finder"')
     lines.append("  activate")
-    lines.append(f'  make new Finder window to POSIX file "{esc(paths[0])}" as alias')
+    lines.append(f'  make new Finder window to POSIX file "{_esc_applescript(paths[0])}" as alias')
     if window_rect:
         x, y, w, h = window_rect
         lines.append(f"  set bounds of front Finder window to {{{x}, {y}, {x + w}, {y + h}}}")
@@ -149,7 +160,7 @@ def _build_applescript(
         lines.append("")
         lines.append('tell application "Finder"')
         lines.append(
-            f'  set target of front Finder window to POSIX file "{esc(path)}" as alias'
+            f'  set target of front Finder window to POSIX file "{_esc_applescript(path)}" as alias'
         )
         lines.append("end tell")
         lines.append("")
@@ -183,16 +194,7 @@ def _open_separate(
     """Fallback: open each folder in a separate new window."""
     for i, path in enumerate(paths, start=1):
         try:
-            escaped = path.replace("\\", "\\\\").replace('"', '\\"')
-            script = (
-                'tell application "Finder"\n'
-                '  activate\n'
-                f'  make new Finder window to POSIX file "{escaped}" as alias\n'
-            )
-            if window_rect:
-                x, y, w, h = window_rect
-                script += f'  set bounds of front Finder window to {{{x}, {y}, {x + w}, {y + h}}}\n'
-            script += 'end tell'
+            script = _build_open_window_script(path, window_rect)
             subprocess.Popen(["osascript", "-e", script], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
             log.debug("Opened separately: [%d/%d] %s", i, len(paths), path)
             if on_progress:

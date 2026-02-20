@@ -29,6 +29,10 @@ from file_tab_opener.widgets import (
 
 log = logging.getLogger(__name__)
 
+# Dropdown value prefixes
+_PIN_PREFIX = "\U0001f4cc "   # 📌 + space (2 chars in Python)
+_UNPIN_PREFIX = "   "         # 3 spaces
+
 # Import ctk only when available
 if CTK_AVAILABLE:
     import customtkinter as ctk
@@ -170,9 +174,14 @@ class HistorySection:
 
     def _on_dropdown_focus_out(self, _event: Any) -> None:
         """Handle FocusOut on dropdown -- delay close to avoid racing with selection."""
-        if self._dropdown_listbox and self._dropdown_listbox.curselection():
-            # A selection is active; let _on_dropdown_select handle it
-            return
+        try:
+            if (self._dropdown_listbox
+                    and self._dropdown_listbox.winfo_exists()
+                    and self._dropdown_listbox.curselection()):
+                # A selection is active; let _on_dropdown_select handle it
+                return
+        except tk.TclError:
+            pass
         self.frame.after(100, self._close_dropdown)
 
     def _close_dropdown(self) -> None:
@@ -199,7 +208,7 @@ class HistorySection:
         history = self.config.get_sorted_history()
         values: list[str] = []
         for entry in history:
-            prefix = "\U0001f4cc " if entry.pinned else "   "
+            prefix = _PIN_PREFIX if entry.pinned else _UNPIN_PREFIX
             values.append(f"{prefix}{entry.path}")
         return values
 
@@ -208,10 +217,10 @@ class HistorySection:
         text = self.entry.get().strip()
         if text == t("path.placeholder"):
             return ""
-        if text.startswith("\U0001f4cc "):
-            text = text[2:]
-        elif text.startswith("   "):
-            text = text[3:]
+        if text.startswith(_PIN_PREFIX):
+            text = text[len(_PIN_PREFIX):]
+        elif text.startswith(_UNPIN_PREFIX):
+            text = text[len(_UNPIN_PREFIX):]
         return text.strip()
 
     def _on_open(self) -> None:
@@ -247,7 +256,7 @@ class HistorySection:
                 break
         if not found:
             self.config.add_history(expanded)
-        self.config.toggle_pin(expanded)
+        self.config.toggle_pin(normalized)
         self.config.save()
 
     def _on_clear(self) -> None:

@@ -147,6 +147,34 @@ pyinstaller --noconfirm --onedir --windowed \
 
 > **참고:** 각 OS용 빌드는 해당 OS에서 수행해야 합니다. macOS에서 Windows용 `.exe`를 만들 수 없습니다(반대도 마찬가지).
 
+## 프로젝트 구조
+
+```
+file_tab_opener/
+├── pyproject.toml           # 패키지 설정
+├── LICENSE                  # MIT 라이선스
+├── README.md                # 영어 README
+├── README_ko.md             # 이 파일
+├── file_tab_opener/         # 소스 패키지
+│   ├── __init__.py
+│   ├── __main__.py          # 진입점
+│   ├── config.py            # 설정 파일 관리
+│   ├── i18n.py              # 국제화 (5개 언어)
+│   ├── gui.py               # 재내보내기 모듈 (하위 호환)
+│   ├── widgets.py           # 위젯 추상화 (CTk / ttk) + TabView
+│   ├── history.py           # 기록 섹션 UI
+│   ├── tab_group.py         # 탭 그룹 섹션 UI
+│   ├── main_window.py       # 메인 윈도우 구성
+│   ├── opener_win.py        # Windows 탐색기 탭 열기
+│   └── opener_mac.py        # macOS Finder 탭 열기
+└── tests/
+    ├── test_config.py       # 설정 모듈 테스트
+    ├── test_i18n.py         # i18n 모듈 테스트
+    ├── test_gui.py          # GUI 로직 테스트
+    ├── test_opener_mac.py   # macOS opener 테스트
+    └── test_opener_win.py   # Windows opener 테스트
+```
+
 ## 라이선스
 
 [MIT License](LICENSE) © 2026 obott9

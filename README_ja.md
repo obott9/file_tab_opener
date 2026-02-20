@@ -160,12 +160,19 @@ file_tab_opener/
 │   ├── __main__.py          # エントリーポイント
 │   ├── config.py            # 設定ファイル管理
 │   ├── i18n.py              # 国際化（5言語対応）
-│   ├── gui.py               # GUI（customtkinter / tkinter）
+│   ├── gui.py               # 再エクスポートモジュール（後方互換）
+│   ├── widgets.py           # ウィジェット抽象化（CTk / ttk）+ TabView
+│   ├── history.py           # 履歴セクションUI
+│   ├── tab_group.py         # タブグループセクションUI
+│   ├── main_window.py       # メインウィンドウ構成
 │   ├── opener_win.py        # Windows Explorerタブ開き処理
 │   └── opener_mac.py        # macOS Finderタブ開き処理
 └── tests/
-    ├── test_config.py       # 設定モジュールのテスト（40テスト）
-    └── test_i18n.py         # i18nモジュールのテスト（28テスト）
+    ├── test_config.py       # 設定モジュールのテスト
+    ├── test_i18n.py         # i18nモジュールのテスト
+    ├── test_gui.py          # GUIロジックのテスト
+    ├── test_opener_mac.py   # macOS openerのテスト
+    └── test_opener_win.py   # Windows openerのテスト
 ```
 
 ## ライセンス

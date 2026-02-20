@@ -1,4 +1,5 @@
-# DEPRECATED: Use pyproject.toml instead.
+# DEPRECATED: This file is kept only for tools that require requirements.txt.
+# For installation, use pyproject.toml:
 #   pip install .          (core only)
 #   pip install .[all]     (all optional dependencies)
 #   pip install -e .[all]  (development, editable install)

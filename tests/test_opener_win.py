@@ -1,28 +1,53 @@
 """Tests for opener_win module.
 
-Covers: get_frontmost_explorer_rect(), _is_explorer_hwnd(),
+Covers: validate_paths, get_frontmost_explorer_rect(), _is_explorer_hwnd(),
 _enum_explorer_hwnds() — all with mocked ctypes calls.
 """
 
 from __future__ import annotations
 
-import ctypes
-import ctypes.wintypes as wintypes
 import sys
-from unittest.mock import MagicMock, patch, call
+from unittest.mock import MagicMock, patch
 
 import pytest
 
-# Skip entire module on non-Windows platforms
-pytestmark = pytest.mark.skipif(
-    sys.platform != "win32", reason="Windows-only tests"
-)
+# Skip entire module on non-Windows platforms (both collection and execution)
+if sys.platform != "win32":
+    pytest.skip("Windows-only tests", allow_module_level=True)
+
+import ctypes
+import ctypes.wintypes as wintypes
 
 from file_tab_opener.opener_win import (
     get_frontmost_explorer_rect,
+    validate_paths,
     _is_explorer_hwnd,
     _enum_explorer_hwnds,
 )
+
+
+# ============================================================
+# validate_paths
+# ============================================================
+
+
+class TestValidatePaths:
+    """Test validate_paths with mocked filesystem."""
+
+    @patch("file_tab_opener.opener_win.Path.is_dir")
+    def test_all_valid(self, mock_is_dir: MagicMock) -> None:
+        mock_is_dir.return_value = True
+        valid, invalid = validate_paths([r"C:\Users\test\Documents"])
+        assert len(valid) == 1
+        assert len(invalid) == 0
+
+    @patch("file_tab_opener.opener_win.Path.is_dir")
+    def test_expanduser(self, mock_is_dir: MagicMock) -> None:
+        """Paths with ~ should be expanded."""
+        mock_is_dir.return_value = True
+        valid, invalid = validate_paths(["~/Documents"])
+        assert len(valid) == 1
+        assert "~" not in valid[0]
 
 
 # ============================================================
@@ -64,10 +89,12 @@ class TestGetFrontmostExplorerRect:
 
     @patch("file_tab_opener.opener_win._enum_explorer_hwnds")
     @patch("file_tab_opener.opener_win._is_explorer_hwnd")
+    @patch("file_tab_opener.opener_win.wintypes")
     @patch("file_tab_opener.opener_win.ctypes")
     def test_foreground_is_explorer(
         self,
         mock_ctypes: MagicMock,
+        mock_wintypes: MagicMock,
         mock_is_explorer: MagicMock,
         mock_enum: MagicMock,
     ) -> None:
@@ -75,23 +102,20 @@ class TestGetFrontmostExplorerRect:
         mock_ctypes.windll.user32.GetForegroundWindow.return_value = 100
         mock_is_explorer.return_value = True
 
-        # Mock GetWindowRect to fill the RECT struct
-        def fake_get_window_rect(hwnd: int, rect_ptr: object) -> bool:
-            rect = ctypes.cast(rect_ptr, ctypes.POINTER(wintypes.RECT)).contents
-            rect.left = 50
-            rect.top = 100
-            rect.right = 850
-            rect.bottom = 700
-            return True
+        mock_rect = MagicMock()
+        mock_rect.left = 50
+        mock_rect.top = 100
+        mock_rect.right = 850
+        mock_rect.bottom = 700
+        mock_wintypes.RECT.return_value = mock_rect
 
-        mock_ctypes.windll.user32.GetWindowRect.side_effect = fake_get_window_rect
-        mock_ctypes.byref = ctypes.byref
-        # Provide wintypes.RECT as the real class
-        mock_ctypes.wintypes = wintypes
+        mock_ctypes.windll.user32.GetWindowRect.return_value = True
+        mock_ctypes.byref.return_value = MagicMock()
 
-        # Need to re-import to use the mocked ctypes properly
-        # Instead, we test the logic via integration with real ctypes
-        pass  # covered by integration test below
+        result = get_frontmost_explorer_rect()
+
+        assert result == (50, 100, 800, 600)
+        mock_ctypes.windll.user32.GetWindowRect.assert_called_once()
 
     @patch("file_tab_opener.opener_win._enum_explorer_hwnds")
     @patch("file_tab_opener.opener_win._is_explorer_hwnd")
@@ -106,7 +130,6 @@ class TestGetFrontmostExplorerRect:
 
         with patch("file_tab_opener.opener_win.ctypes") as mock_ctypes:
             mock_ctypes.windll.user32.GetForegroundWindow.return_value = 999
-            # Re-bind _is_explorer_hwnd to use the already-patched version
             result = get_frontmost_explorer_rect()
 
         assert result is None
@@ -127,7 +150,6 @@ class TestGetFrontmostExplorerRect:
         mock_is_explorer.return_value = False
         mock_enum.return_value = [200, 300]
 
-        # Mock RECT
         mock_rect = MagicMock()
         mock_rect.left = 10
         mock_rect.top = 20
@@ -141,7 +163,6 @@ class TestGetFrontmostExplorerRect:
         result = get_frontmost_explorer_rect()
 
         assert result == (10, 20, 800, 600)
-        # Should have used hwnd 200 (first from enum)
         mock_ctypes.windll.user32.GetWindowRect.assert_called_once()
 
     @patch("file_tab_opener.opener_win._enum_explorer_hwnds")

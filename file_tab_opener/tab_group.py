@@ -596,9 +596,4 @@ class TabGroupSection:
             return
         self._opening = True
         self.on_open_tabs(group.paths, self._get_window_rect())
-        # Reset flag when thread completes (via root.after) instead of fixed delay
-        self.frame.after(2000, self._reset_opening_flag)
-
-    def _reset_opening_flag(self) -> None:
-        """Reset the opening flag after a delay."""
-        self._opening = False
+        # _opening is reset by MainWindow._reset_tab_opening_flag when thread completes

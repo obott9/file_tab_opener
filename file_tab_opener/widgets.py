@@ -11,6 +11,7 @@ import logging
 import platform
 import tkinter as tk
 import tkinter.ttk as ttk
+import unicodedata
 from collections.abc import Callable
 from typing import Any
 
@@ -79,12 +80,18 @@ def Entry(parent: Any, **kw: Any) -> Any:
 
 
 def _strip_quotes(text: str) -> str:
-    """Strip matching surrounding quotes (shell quoting artifacts).
-
-    Delegates to config.strip_quotes (single source of truth).
-    """
+    """Strip matching surrounding quotes. Delegates to config.strip_quotes."""
     from file_tab_opener.config import strip_quotes
     return strip_quotes(text)
+
+
+def _text_display_width(text: str) -> int:
+    """Estimate display width of text, counting wide (CJK) chars as 2."""
+    width = 0
+    for ch in text:
+        eaw = unicodedata.east_asian_width(ch)
+        width += 2 if eaw in ("W", "F") else 1
+    return width
 
 
 def _setup_placeholder(entry: ttk.Entry, placeholder: str) -> None:
@@ -295,8 +302,8 @@ class TabView:
     def _estimate_btn_width(self, name: str) -> int:
         """Estimate the pixel width a button would need for the given text."""
         if CTK_AVAILABLE:
-            # width=0 makes CTkButton fit text; estimate with padding
-            return max(len(name) * 9 + 24, 50)
+            # width=0 makes CTkButton fit text; use display width for CJK
+            return max(_text_display_width(name) * 9 + 24, 50)
         else:
             # Create a temporary button, measure, destroy
             tmp = ttk.Button(self._inner, text=name)

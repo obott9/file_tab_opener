@@ -111,7 +111,7 @@ class ConfigManager:
         text = json.dumps(d, ensure_ascii=False, indent=2)
         self.path.write_text(text, encoding="utf-8")
 
-    def _to_dict(self) -> dict[str, object]:
+    def _to_dict(self) -> dict[str, Any]:
         """Serialize AppConfig to a dictionary."""
         return {
             "history": [
@@ -139,7 +139,7 @@ class ConfigManager:
         }
 
     @staticmethod
-    def _from_dict(d: dict[str, object]) -> AppConfig:
+    def _from_dict(d: dict[str, Any]) -> AppConfig:
         """Deserialize a dictionary into AppConfig. Handles missing keys gracefully."""
         history: list[HistoryEntry] = []
         for item in d.get("history", []):

@@ -108,15 +108,18 @@ def _setup_placeholder(entry: ttk.Entry, placeholder: str) -> None:
 
 
 class TabView:
-    """Tab name selector with auto-wrapping rows (up to MAX_ROWS).
+    """Tab name selector with auto-wrapping rows and vertical scrolling.
 
     Buttons wrap to the next row when they exceed the available width.
+    The visible area shows up to VISIBLE_ROWS rows; additional rows are
+    accessible via a vertical scrollbar.
     Works with both customtkinter (CTkButton) and standard ttk (ttk.Button).
     """
 
-    MAX_ROWS = 4
-    _BTN_PAD_X = 2  # horizontal padding between buttons
-    _BTN_PAD_Y = 1  # vertical padding between rows
+    VISIBLE_ROWS = 3  # rows visible without scrolling
+    _BTN_PAD_X = 2    # horizontal padding between buttons
+    _BTN_PAD_Y = 1    # vertical padding between rows
+    _ROW_HEIGHT = 32   # estimated pixel height per button row
 
     def __init__(self, parent: Any, on_tab_changed: Callable[[str], None] | None = None) -> None:
         self._names: list[str] = []
@@ -124,13 +127,37 @@ class TabView:
         self._on_tab_changed = on_tab_changed
         self._parent = parent
 
+        # Outer frame holds canvas + optional scrollbar
         self._frame = ttk.Frame(parent)
+
+        self._canvas = tk.Canvas(
+            self._frame, highlightthickness=0, borderwidth=0,
+        )
+        self._scrollbar = ttk.Scrollbar(
+            self._frame, orient=tk.VERTICAL, command=self._canvas.yview,
+        )
+        self._canvas.configure(yscrollcommand=self._scrollbar.set)
+
+        self._canvas.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+        # Scrollbar is packed/forgotten dynamically in _update_scroll
+
+        # Inner frame drawn on the canvas
+        self._inner = ttk.Frame(self._canvas)
+        self._canvas_window = self._canvas.create_window(
+            (0, 0), window=self._inner, anchor="nw",
+        )
+
         self._row_frames: list[Any] = []
         self._buttons: dict[str, Any] = {}
         self._last_width: int = 0
         self._relayout_pending: bool = False
 
-        self._frame.bind("<Configure>", self._on_configure)
+        self._inner.bind("<Configure>", self._on_inner_configure)
+        self._canvas.bind("<Configure>", self._on_canvas_configure)
+
+        # Mouse-wheel scroll on canvas and inner frame
+        self._canvas.bind("<MouseWheel>", self._on_mousewheel)
+        self._inner.bind("<MouseWheel>", self._on_mousewheel)
 
     def pack(self, **kw: Any) -> None:
         """Pack the tab selector."""
@@ -198,13 +225,38 @@ class TabView:
         """Return the list of tab names."""
         return list(self._names)
 
+    def scroll_to_current(self) -> None:
+        """Scroll the canvas so that the current tab's button is visible."""
+        if not self._current or self._current not in self._buttons:
+            return
+        btn = self._buttons[self._current]
+        # Get the button's y position relative to the inner frame
+        try:
+            btn_y = btn.winfo_y()
+            btn_h = btn.winfo_height()
+            inner_h = self._inner.winfo_reqheight()
+            canvas_h = self._canvas.winfo_height()
+            if inner_h <= canvas_h:
+                return  # no scrolling needed
+            # Scroll so btn top is visible, with a little margin
+            top_frac = max(0, (btn_y - 2)) / inner_h
+            bot_frac = min(1.0, (btn_y + btn_h + 2)) / inner_h
+            vis_lo, vis_hi = self._canvas.yview()
+            if top_frac < vis_lo:
+                self._canvas.yview_moveto(top_frac)
+            elif bot_frac > vis_hi:
+                self._canvas.yview_moveto(bot_frac - (vis_hi - vis_lo))
+        except Exception:
+            pass
+
     # ---- internal ----
 
     def _rebuild(self) -> None:
         """Destroy everything and schedule a fresh layout."""
-        self._clear()
+        self._clear_inner()
 
         if not self._names:
+            self._update_scroll(0)
             return
 
         if not self._current or self._current not in self._names:
@@ -226,42 +278,54 @@ class TabView:
             return max(len(name) * 9 + 24, 50)
         else:
             # Create a temporary button, measure, destroy
-            tmp = ttk.Button(self._frame, text=name)
+            tmp = ttk.Button(self._inner, text=name)
             tmp.update_idletasks()
             w = tmp.winfo_reqwidth()
             tmp.destroy()
             return max(w, 40)
 
-    def _clear(self) -> None:
-        """Destroy all child widgets."""
-        for child in self._frame.winfo_children():
+    def _clear_inner(self) -> None:
+        """Destroy all child widgets inside the inner frame."""
+        for child in self._inner.winfo_children():
             child.destroy()
         self._row_frames.clear()
         self._buttons.clear()
 
-    def _on_configure(self, _event: Any) -> None:
-        """Handle frame resize -- re-layout if width changed."""
-        new_width = self._frame.winfo_width()
+    def _on_inner_configure(self, _event: Any) -> None:
+        """Update canvas scroll region when inner frame size changes."""
+        self._canvas.configure(scrollregion=self._canvas.bbox("all"))
+
+    def _on_canvas_configure(self, event: Any) -> None:
+        """Handle canvas resize -- match inner frame width and re-layout."""
+        # Keep inner frame width in sync with canvas
+        self._canvas.itemconfigure(self._canvas_window, width=event.width)
+
+        new_width = event.width
         if new_width != self._last_width and new_width > 1 and self._names:
             self._last_width = new_width
             if not self._relayout_pending:
                 self._relayout_pending = True
                 self._frame.after_idle(self._relayout)
 
+    def _on_mousewheel(self, event: Any) -> None:
+        """Handle mouse-wheel scroll on the tab area."""
+        # macOS: event.delta is ±1..N; Windows/Linux: ±120
+        if IS_MAC:
+            self._canvas.yview_scroll(-event.delta, "units")
+        else:
+            self._canvas.yview_scroll(-event.delta // 120, "units")
+
     def _relayout(self) -> None:
-        """Destroy and recreate buttons in wrapping rows."""
+        """Destroy and recreate buttons in wrapping rows (unlimited)."""
         self._relayout_pending = False
 
         if not self._names:
             return
 
         # Destroy old rows + buttons
-        for child in self._frame.winfo_children():
-            child.destroy()
-        self._row_frames.clear()
-        self._buttons.clear()
+        self._clear_inner()
 
-        available = self._frame.winfo_width()
+        available = self._canvas.winfo_width()
         if available <= 1:
             available = 10_000
 
@@ -271,14 +335,14 @@ class TabView:
                 (name, self._estimate_btn_width(name)) for name in self._names
             ]
 
-        # Split names into rows (greedy, max MAX_ROWS)
+        # Split names into rows (greedy, unlimited rows)
         rows: list[list[str]] = []
         current_row: list[str] = []
         row_used = 0
 
         for name, w in self._btn_widths:
             needed = w + self._BTN_PAD_X * 2
-            if current_row and row_used + needed > available and len(rows) < self.MAX_ROWS - 1:
+            if current_row and row_used + needed > available:
                 rows.append(current_row)
                 current_row = []
                 row_used = 0
@@ -288,14 +352,9 @@ class TabView:
         if current_row:
             rows.append(current_row)
 
-        # If too many rows, merge excess into the last allowed row
-        while len(rows) > self.MAX_ROWS:
-            overflow = rows.pop()
-            rows[-1].extend(overflow)
-
         # Create row frames and buttons as direct children of each row
         for row_names in rows:
-            rf = ttk.Frame(self._frame)
+            rf = ttk.Frame(self._inner)
             rf.pack(fill=tk.X, pady=self._BTN_PAD_Y)
             self._row_frames.append(rf)
 
@@ -314,8 +373,27 @@ class TabView:
                     )
                 btn.pack(side=tk.LEFT, padx=self._BTN_PAD_X, pady=0)
                 self._buttons[name] = btn
+                # Mouse-wheel on buttons should also scroll
+                btn.bind("<MouseWheel>", self._on_mousewheel)
 
         self._update_selection()
+        self._update_scroll(len(rows))
+        # Scroll to make the current tab visible
+        self._frame.after_idle(self.scroll_to_current)
+
+    def _update_scroll(self, num_rows: int) -> None:
+        """Show/hide scrollbar and set canvas height based on row count."""
+        row_h = self._ROW_HEIGHT + self._BTN_PAD_Y * 2
+        if num_rows <= self.VISIBLE_ROWS:
+            # All rows fit — use natural height, hide scrollbar
+            display_h = max(num_rows, 1) * row_h
+            self._canvas.configure(height=display_h)
+            self._scrollbar.pack_forget()
+        else:
+            # Need scrolling — cap height at VISIBLE_ROWS
+            display_h = self.VISIBLE_ROWS * row_h
+            self._canvas.configure(height=display_h)
+            self._scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
 
     def _update_selection(self) -> None:
         """Update the visual selection state of all buttons."""

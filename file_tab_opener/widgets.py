@@ -7,11 +7,14 @@ customtkinter (modern UI) or fall back to standard tkinter/ttk.
 
 from __future__ import annotations
 
+import logging
 import platform
 import tkinter as tk
 import tkinter.ttk as ttk
 from collections.abc import Callable
 from typing import Any
+
+log = logging.getLogger(__name__)
 
 IS_MAC = platform.system() == "Darwin"
 IS_WIN = platform.system() == "Windows"
@@ -229,26 +232,43 @@ class TabView:
     def scroll_to_current(self) -> None:
         """Scroll the canvas so that the current tab's button is visible."""
         if not self._current or self._current not in self._buttons:
+            log.debug("scroll_to_current: skip (current=%s)", self._current)
             return
         btn = self._buttons[self._current]
-        # Get the button's y position relative to the inner frame
         try:
-            btn_y = btn.winfo_y()
+            # Force geometry calculation
+            self._inner.update_idletasks()
+
+            # btn.winfo_y() is relative to its parent (row_frame),
+            # so add the row_frame's y position within the inner frame.
+            row_frame = btn.master
+            btn_y = row_frame.winfo_y() + btn.winfo_y()
             btn_h = btn.winfo_height()
             inner_h = self._inner.winfo_reqheight()
             canvas_h = self._canvas.winfo_height()
+            log.debug(
+                "scroll_to_current: tab=%s, btn_y=%s, btn_h=%s, "
+                "inner_h=%s, canvas_h=%s, yview=%s",
+                self._current, btn_y, btn_h, inner_h, canvas_h,
+                self._canvas.yview(),
+            )
             if inner_h <= canvas_h:
-                return  # no scrolling needed
-            # Scroll so btn top is visible, with a little margin
+                log.debug("scroll_to_current: no scroll needed (inner fits)")
+                return
             top_frac = max(0, (btn_y - 2)) / inner_h
             bot_frac = min(1.0, (btn_y + btn_h + 2)) / inner_h
             vis_lo, vis_hi = self._canvas.yview()
             if top_frac < vis_lo:
+                log.debug("scroll_to_current: scroll UP to %s", top_frac)
                 self._canvas.yview_moveto(top_frac)
             elif bot_frac > vis_hi:
-                self._canvas.yview_moveto(bot_frac - (vis_hi - vis_lo))
-        except Exception:
-            pass
+                target = bot_frac - (vis_hi - vis_lo)
+                log.debug("scroll_to_current: scroll DOWN to %s", target)
+                self._canvas.yview_moveto(target)
+            else:
+                log.debug("scroll_to_current: already visible")
+        except Exception as e:
+            log.debug("scroll_to_current: exception %s", e)
 
     # ---- internal ----
 
@@ -312,6 +332,7 @@ class TabView:
         """Bind mouse-wheel to root so it works even over CTkButton internals."""
         root = self._frame.winfo_toplevel()
         root.bind_all("<MouseWheel>", self._on_mousewheel, add="+")
+        log.debug("TabView: bind_all <MouseWheel> on %s", root)
 
     def _is_cursor_over_tabview(self, event: Any) -> bool:
         """Check if the mouse cursor is within the TabView canvas area."""
@@ -326,13 +347,23 @@ class TabView:
 
     def _on_mousewheel(self, event: Any) -> None:
         """Handle mouse-wheel scroll on the tab area (bind_all handler)."""
-        if not self._is_cursor_over_tabview(event):
+        over = self._is_cursor_over_tabview(event)
+        log.debug(
+            "TabView mousewheel: delta=%s, x_root=%s, y_root=%s, over=%s, "
+            "canvas=(%s,%s,%s,%s), scrollregion=%s, yview=%s",
+            event.delta, event.x_root, event.y_root, over,
+            self._canvas.winfo_rootx(), self._canvas.winfo_rooty(),
+            self._canvas.winfo_width(), self._canvas.winfo_height(),
+            self._canvas.cget("scrollregion"), self._canvas.yview(),
+        )
+        if not over:
             return
         # macOS: event.delta is ±1..N; Windows/Linux: ±120
         if IS_MAC:
             self._canvas.yview_scroll(-event.delta, "units")
         else:
             self._canvas.yview_scroll(-event.delta // 120, "units")
+        log.debug("TabView mousewheel: after scroll yview=%s", self._canvas.yview())
 
     def _relayout(self) -> None:
         """Destroy and recreate buttons in wrapping rows (unlimited)."""

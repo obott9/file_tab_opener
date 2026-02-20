@@ -155,7 +155,7 @@ class TabView:
         self._last_width: int = 0
         self._relayout_pending: bool = False
         self._rebuild_in_progress: bool = False
-        self._scroll_after_id: str | None = None
+        self._scroll_needed: bool = False
 
         self._inner.bind("<Configure>", self._on_inner_configure)
         self._canvas.bind("<Configure>", self._on_canvas_configure)
@@ -222,10 +222,11 @@ class TabView:
             return
         self._current = name
         self._update_selection()
-        # If a rebuild is in progress, _relayout will handle scroll_to_current.
-        # Scheduling here too would cause a premature scroll before layout is done.
-        if not self._rebuild_in_progress:
-            self._schedule_scroll()
+        if self._rebuild_in_progress:
+            # Layout not ready yet; _on_inner_configure will scroll later.
+            self._scroll_needed = True
+        else:
+            self.scroll_to_current()
 
     def move_tab(self, old_index: int, new_index: int) -> None:
         """Move a tab from old_index to new_index."""
@@ -240,7 +241,6 @@ class TabView:
 
     def scroll_to_current(self) -> None:
         """Scroll the canvas so that the current tab's button is visible."""
-        self._scroll_after_id = None
         if not self._current or self._current not in self._buttons:
             return
         btn = self._buttons[self._current]
@@ -267,12 +267,6 @@ class TabView:
                 self._canvas.yview_moveto(max(0.0, target))
         except Exception:
             pass
-
-    def _schedule_scroll(self) -> None:
-        """Schedule a scroll_to_current, cancelling any pending one."""
-        if self._scroll_after_id is not None:
-            self._frame.after_cancel(self._scroll_after_id)
-        self._scroll_after_id = self._frame.after(100, self.scroll_to_current)
 
     # ---- internal ----
 
@@ -319,8 +313,15 @@ class TabView:
         self._buttons.clear()
 
     def _on_inner_configure(self, _event: Any) -> None:
-        """Update canvas scroll region when inner frame size changes."""
+        """Update canvas scroll region when inner frame size changes.
+
+        This fires after the inner frame's geometry is finalized, so it
+        is the right moment to scroll the current tab into view.
+        """
         self._canvas.configure(scrollregion=self._canvas.bbox("all"))
+        if self._scroll_needed:
+            self._scroll_needed = False
+            self.scroll_to_current()
 
     def _on_canvas_configure(self, event: Any) -> None:
         """Handle canvas resize -- match inner frame width and re-layout."""
@@ -454,9 +455,9 @@ class TabView:
 
         self._update_selection()
         self._update_scroll(len(rows))
-        # Mark rebuild complete, then schedule scroll (after geometry settles)
+        # Mark rebuild complete; _on_inner_configure will scroll into view.
         self._rebuild_in_progress = False
-        self._schedule_scroll()
+        self._scroll_needed = True
 
     def _update_scroll(self, num_rows: int) -> None:
         """Set canvas height based on row count. Scrollbar is always visible."""

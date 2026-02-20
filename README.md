@@ -9,7 +9,7 @@ Instead of opening folders one by one, register them in a named tab group and op
 ## Features
 
 - **Tab Group Management** — Create named groups (e.g. "Work", "Personal") and assign folder paths to each
-- **Tab Group Copy** — Duplicate an existing tab group with one click
+- **Tab Group Copy** — Duplicate an existing tab group. Copy names follow `"{base} {N}"` (half-width space + number): "Work" → "Work 1" → "Work 2". Copying a numbered tab extracts the base name ("Work 3" → base "Work") and fills the first available number. Other separators like hyphens are treated as part of the name ("Work-3" → "Work-3 1").
 - **One-Click Open** — Open all folders in a group as tabs in a single Explorer/Finder window
 - **History with Pin** — Recently opened folders are tracked; pin frequently used ones
 - **Cross-Platform** — Windows (Explorer tabs, Win 11+) and macOS (Finder tabs)

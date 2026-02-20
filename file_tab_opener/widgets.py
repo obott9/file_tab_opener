@@ -212,8 +212,8 @@ class TabView:
     def _estimate_btn_width(self, name: str) -> int:
         """Estimate the pixel width a button would need for the given text."""
         if CTK_AVAILABLE:
-            # CTkButton default width is ~140px; approximate from text
-            return max(len(name) * 10 + 28, 80)
+            # width=0 makes CTkButton fit text; estimate with padding
+            return max(len(name) * 9 + 24, 50)
         else:
             # Create a temporary button, measure, destroy
             tmp = ttk.Button(self._frame, text=name)
@@ -293,6 +293,7 @@ class TabView:
                 if CTK_AVAILABLE:
                     btn = ctk.CTkButton(
                         rf, text=name,
+                        width=0,  # fit to text (disable 140px default)
                         command=lambda n=name: self._on_btn_click(n),
                         cursor="hand2",
                     )
@@ -317,9 +318,17 @@ class TabView:
         """Highlight the active tab button (customtkinter)."""
         for name, btn in self._buttons.items():
             if name == self._current:
-                btn.configure(fg_color=("gray75", "gray25"))
+                # Selected: theme accent color (blue)
+                btn.configure(
+                    fg_color=("#3b8ed0", "#1f6aa5"),
+                    text_color=("white", "white"),
+                )
             else:
-                btn.configure(fg_color=("gray86", "gray17"))
+                # Unselected: subtle gray
+                btn.configure(
+                    fg_color=("gray78", "gray28"),
+                    text_color=("gray20", "gray80"),
+                )
 
     def _update_ttk_highlight(self) -> None:
         """Highlight the active tab button (ttk fallback)."""

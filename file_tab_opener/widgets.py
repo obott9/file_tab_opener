@@ -155,9 +155,9 @@ class TabView:
         self._inner.bind("<Configure>", self._on_inner_configure)
         self._canvas.bind("<Configure>", self._on_canvas_configure)
 
-        # Mouse-wheel scroll on canvas and inner frame
-        self._canvas.bind("<MouseWheel>", self._on_mousewheel)
-        self._inner.bind("<MouseWheel>", self._on_mousewheel)
+        # Mouse-wheel: bind_all on root to catch events from any child widget
+        # (CTkButton has internal child widgets that swallow per-widget binds)
+        self._frame.after_idle(self._setup_mousewheel)
 
     def pack(self, **kw: Any) -> None:
         """Pack the tab selector."""
@@ -213,7 +213,7 @@ class TabView:
             return
         self._current = name
         self._update_selection()
-        self._frame.after_idle(self.scroll_to_current)
+        self._frame.after(50, self.scroll_to_current)
 
     def move_tab(self, old_index: int, new_index: int) -> None:
         """Move a tab from old_index to new_index."""
@@ -308,8 +308,26 @@ class TabView:
                 self._relayout_pending = True
                 self._frame.after_idle(self._relayout)
 
+    def _setup_mousewheel(self) -> None:
+        """Bind mouse-wheel to root so it works even over CTkButton internals."""
+        root = self._frame.winfo_toplevel()
+        root.bind_all("<MouseWheel>", self._on_mousewheel, add="+")
+
+    def _is_cursor_over_tabview(self, event: Any) -> bool:
+        """Check if the mouse cursor is within the TabView canvas area."""
+        try:
+            cx = self._canvas.winfo_rootx()
+            cy = self._canvas.winfo_rooty()
+            cw = self._canvas.winfo_width()
+            ch = self._canvas.winfo_height()
+            return cx <= event.x_root <= cx + cw and cy <= event.y_root <= cy + ch
+        except Exception:
+            return False
+
     def _on_mousewheel(self, event: Any) -> None:
-        """Handle mouse-wheel scroll on the tab area."""
+        """Handle mouse-wheel scroll on the tab area (bind_all handler)."""
+        if not self._is_cursor_over_tabview(event):
+            return
         # macOS: event.delta is ±1..N; Windows/Linux: ±120
         if IS_MAC:
             self._canvas.yview_scroll(-event.delta, "units")
@@ -374,13 +392,11 @@ class TabView:
                     )
                 btn.pack(side=tk.LEFT, padx=self._BTN_PAD_X, pady=0)
                 self._buttons[name] = btn
-                # Mouse-wheel on buttons should also scroll
-                btn.bind("<MouseWheel>", self._on_mousewheel)
 
         self._update_selection()
         self._update_scroll(len(rows))
-        # Scroll to make the current tab visible
-        self._frame.after_idle(self.scroll_to_current)
+        # Scroll to current after layout settles (after_idle is too early)
+        self._frame.after(50, self.scroll_to_current)
 
     def _update_scroll(self, num_rows: int) -> None:
         """Set canvas height based on row count. Scrollbar is always visible."""

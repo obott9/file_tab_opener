@@ -52,7 +52,7 @@ coll = COLLECT(
 app = BUNDLE(
     coll,
     name='File Tab Opener.app',
-    icon=None,
+    icon='FileTabOpener.icns',
     bundle_identifier='com.obott9.file-tab-opener',
     version='1.0.0',
     info_plist={

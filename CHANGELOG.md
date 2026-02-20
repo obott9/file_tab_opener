@@ -13,6 +13,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/).
 - Thread exception notification via error dialog (previously silent)
 - Debug logging for scroll and mousewheel diagnostics
 - PyInstaller `.spec` file with proper macOS metadata (bundle ID, version, plist)
+- Custom app icon (`FileTabOpener.icns`)
 
 ### Changed
 - **gui.py split into modules**: `main_window.py`, `widgets.py`, `tab_group.py`, `history.py` for maintainability

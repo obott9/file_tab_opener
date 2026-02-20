@@ -191,7 +191,7 @@ class TabView:
     # ---- internal ----
 
     def _rebuild(self) -> None:
-        """Create button widgets (un-placed) and schedule layout."""
+        """Destroy everything and schedule a fresh layout."""
         self._clear()
 
         if not self._names:
@@ -200,29 +200,27 @@ class TabView:
         if not self._current or self._current not in self._names:
             self._current = self._names[0]
 
+        # Measure button widths using a temporary hidden button
+        self._btn_widths: list[tuple[str, int]] = []
         for name in self._names:
-            btn = self._make_button(name)
-            self._buttons[name] = btn
+            w = self._estimate_btn_width(name)
+            self._btn_widths.append((name, w))
 
-        self._update_selection()
-        # Schedule layout after geometry is settled
+        # Build the actual layout
         self._frame.after_idle(self._relayout)
 
-    def _make_button(self, name: str) -> Any:
-        """Create a tab button (CTkButton or ttk.Button), not yet packed."""
+    def _estimate_btn_width(self, name: str) -> int:
+        """Estimate the pixel width a button would need for the given text."""
         if CTK_AVAILABLE:
-            btn = ctk.CTkButton(
-                self._frame,
-                text=name,
-                command=lambda n=name: self._on_btn_click(n),
-            )
+            # CTkButton default width is ~140px; approximate from text
+            return max(len(name) * 10 + 28, 80)
         else:
-            btn = ttk.Button(
-                self._frame,
-                text=name,
-                command=lambda n=name: self._on_btn_click(n),
-            )
-        return btn
+            # Create a temporary button, measure, destroy
+            tmp = ttk.Button(self._frame, text=name)
+            tmp.update_idletasks()
+            w = tmp.winfo_reqwidth()
+            tmp.destroy()
+            return max(w, 40)
 
     def _clear(self) -> None:
         """Destroy all child widgets."""
@@ -241,43 +239,34 @@ class TabView:
                 self._frame.after_idle(self._relayout)
 
     def _relayout(self) -> None:
-        """Place buttons into wrapping rows based on current frame width."""
+        """Destroy and recreate buttons in wrapping rows."""
         self._relayout_pending = False
 
-        if not self._buttons:
+        if not self._names:
             return
 
-        # Remove row frames but keep button widgets alive
-        for rf in self._row_frames:
-            rf.destroy()
+        # Destroy old rows + buttons
+        for child in self._frame.winfo_children():
+            child.destroy()
         self._row_frames.clear()
-
-        # Unpack buttons (they are children of self._frame, not row_frames)
-        for btn in self._buttons.values():
-            btn.pack_forget()
+        self._buttons.clear()
 
         available = self._frame.winfo_width()
         if available <= 1:
-            # Frame not yet mapped -- fall back to single row
             available = 10_000
 
-        # Measure each button's required width
-        btn_widths: list[tuple[str, int]] = []
-        for name in self._names:
-            btn = self._buttons[name]
-            btn.update_idletasks()
-            w = btn.winfo_reqwidth()
-            if w <= 1:
-                # Not yet rendered: estimate from text length
-                w = max(len(name) * 9 + 20, 60)
-            btn_widths.append((name, w))
+        # Rebuild width estimates if needed
+        if not hasattr(self, "_btn_widths") or len(self._btn_widths) != len(self._names):
+            self._btn_widths = [
+                (name, self._estimate_btn_width(name)) for name in self._names
+            ]
 
         # Split names into rows (greedy, max MAX_ROWS)
         rows: list[list[str]] = []
         current_row: list[str] = []
         row_used = 0
 
-        for name, w in btn_widths:
+        for name, w in self._btn_widths:
             needed = w + self._BTN_PAD_X * 2
             if current_row and row_used + needed > available and len(rows) < self.MAX_ROWS - 1:
                 rows.append(current_row)
@@ -294,18 +283,26 @@ class TabView:
             overflow = rows.pop()
             rows[-1].extend(overflow)
 
-        # Pack buttons into row frames
+        # Create row frames and buttons as direct children of each row
         for row_names in rows:
             rf = ttk.Frame(self._frame)
             rf.pack(fill=tk.X, pady=self._BTN_PAD_Y)
             self._row_frames.append(rf)
 
             for name in row_names:
-                btn = self._buttons[name]
-                # Re-parent to row frame
-                btn.configure(cursor="hand2") if CTK_AVAILABLE else None
-                btn.pack_forget()
-                btn.pack(in_=rf, side=tk.LEFT, padx=self._BTN_PAD_X, pady=0)
+                if CTK_AVAILABLE:
+                    btn = ctk.CTkButton(
+                        rf, text=name,
+                        command=lambda n=name: self._on_btn_click(n),
+                        cursor="hand2",
+                    )
+                else:
+                    btn = ttk.Button(
+                        rf, text=name,
+                        command=lambda n=name: self._on_btn_click(n),
+                    )
+                btn.pack(side=tk.LEFT, padx=self._BTN_PAD_X, pady=0)
+                self._buttons[name] = btn
 
         self._update_selection()
 

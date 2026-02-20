@@ -50,7 +50,13 @@ class KEYBDINPUT(ctypes.Structure):
 
 
 class _INPUT_UNION(ctypes.Union):
-    _fields_ = [("ki", KEYBDINPUT), ("_padding", ctypes.c_byte * 24)]
+    # Padding must be large enough for the largest union member (MOUSEINPUT).
+    # On 64-bit Windows: sizeof(MOUSEINPUT) = 32, sizeof(KEYBDINPUT) = 24,
+    # sizeof(HARDWAREINPUT) = 8.  We only use KEYBDINPUT but the union size
+    # must match the C INPUT structure (40 bytes total = 4 byte type + 4 pad
+    # + 32 byte union on 64-bit, or 28 bytes total on 32-bit).
+    # Using 32 bytes covers both architectures safely.
+    _fields_ = [("ki", KEYBDINPUT), ("_padding", ctypes.c_byte * 32)]
 
 
 class INPUT(ctypes.Structure):
@@ -232,8 +238,9 @@ def validate_paths(paths: list[str]) -> tuple[list[str], list[str]]:
     valid: list[str] = []
     invalid: list[str] = []
     for p in paths:
-        if Path(p).is_dir():
-            valid.append(p)
+        expanded = os.path.expanduser(p)
+        if Path(expanded).is_dir():
+            valid.append(expanded)
         else:
             invalid.append(p)
     return valid, invalid

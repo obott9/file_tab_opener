@@ -14,9 +14,20 @@ import platform
 from dataclasses import dataclass, field
 from datetime import datetime
 from pathlib import Path
-from typing import Final
+from typing import Any, Final
 
 log = logging.getLogger(__name__)
+
+
+def strip_quotes(text: str) -> str:
+    """Strip matching surrounding quotes (shell quoting artifacts).
+
+    Shared utility used by both GUI (entry fields) and config (add_history).
+    """
+    for quote in ('"', "'"):
+        if text.startswith(quote) and text.endswith(quote) and len(text) >= 2:
+            return text[1:-1]
+    return text
 
 HISTORY_MAX: Final[int] = 50
 
@@ -70,7 +81,7 @@ class AppConfig:
     history: list[HistoryEntry] = field(default_factory=list)
     tab_groups: list[TabGroup] = field(default_factory=list)
     window_geometry: str = "800x600"
-    settings: dict[str, object] = field(default_factory=lambda: {"use_custom_tk": True})
+    settings: dict[str, Any] = field(default_factory=lambda: {"use_custom_tk": True})
 
 
 class ConfigManager:
@@ -155,20 +166,14 @@ class ConfigManager:
             history=history,
             tab_groups=tab_groups,
             window_geometry=d.get("window_geometry", "800x600"),
-            settings=d.get("settings", {"use_custom_tk": True}),
+            settings={**{"use_custom_tk": True}, **d.get("settings", {})},
         )
 
     # --- History operations ---
 
     def add_history(self, path: str) -> None:
         """Add a path to history. Updates existing entry or appends a new one."""
-        clean = path.strip()
-        # Strip surrounding quotes only if the unquoted path differs
-        # (i.e., don't strip if the raw path itself is a valid normpath)
-        for quote in ('"', "'"):
-            if clean.startswith(quote) and clean.endswith(quote) and len(clean) >= 2:
-                clean = clean[1:-1]
-                break
+        clean = strip_quotes(path.strip())
         normalized = os.path.normpath(clean)
         for entry in self.data.history:
             if os.path.normpath(entry.path) == normalized:
@@ -217,24 +222,26 @@ class ConfigManager:
         return pinned + unpinned
 
     def _trim_history(self) -> None:
-        """Remove the oldest unpinned entries when history exceeds HISTORY_MAX."""
-        while len(self.data.history) > HISTORY_MAX:
-            oldest_idx: int | None = None
-            oldest_time: str | None = None
-            for i, entry in enumerate(self.data.history):
-                if not entry.pinned:
-                    if oldest_time is None or entry.last_used < oldest_time:
-                        oldest_time = entry.last_used
-                        oldest_idx = i
-            if oldest_idx is not None:
-                self.data.history.pop(oldest_idx)
-            else:
-                break  # All entries are pinned
+        """Remove the oldest unpinned entries when history exceeds HISTORY_MAX.
+
+        O(n log n) implementation: sort unpinned by last_used descending,
+        keep only the newest ones, then recombine with pinned entries.
+        """
+        if len(self.data.history) <= HISTORY_MAX:
+            return
+        pinned = [e for e in self.data.history if e.pinned]
+        unpinned = [e for e in self.data.history if not e.pinned]
+        keep_count = max(HISTORY_MAX - len(pinned), 0)
+        # Sort unpinned by last_used descending, keep newest
+        unpinned.sort(key=lambda e: e.last_used, reverse=True)
+        self.data.history = pinned + unpinned[:keep_count]
 
     # --- Tab group operations ---
 
-    def add_tab_group(self, name: str) -> TabGroup:
-        """Create a new empty tab group."""
+    def add_tab_group(self, name: str) -> TabGroup | None:
+        """Create a new empty tab group. Returns None if the name already exists."""
+        if self.get_tab_group(name) is not None:
+            return None
         group = TabGroup(name=name)
         self.data.tab_groups.append(group)
         return group

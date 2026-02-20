@@ -95,7 +95,7 @@ def main() -> None:
     log.info("Platform: %s, opener: %s", platform.system(), opener.__name__)
 
     # Build and run GUI
-    from file_tab_opener.gui import MainWindow
+    from file_tab_opener.main_window import MainWindow
 
     app = MainWindow(config, opener)
     app.build()

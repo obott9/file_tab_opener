@@ -154,12 +154,18 @@ class TabView:
         self._buttons: dict[str, Any] = {}
         self._last_width: int = 0
         self._relayout_pending: bool = False
+        self._rebuild_in_progress: bool = False
+        self._scroll_after_id: str | None = None
 
         self._inner.bind("<Configure>", self._on_inner_configure)
         self._canvas.bind("<Configure>", self._on_canvas_configure)
 
-        # Mouse-wheel: bind_all on root to catch events from any child widget
-        # (CTkButton has internal child widgets that swallow per-widget binds)
+        # Mouse-wheel / touchpad: bind_all on root to catch events from any
+        # child widget (CTkButton has internal child widgets that swallow
+        # per-widget binds).
+        # Tk 9.0+ on macOS Aqua generates <TouchpadScroll> for trackpad
+        # two-finger scrolling (TIP 684), while <MouseWheel> only fires
+        # for an actual mouse wheel.  We bind both events.
         self._frame.after_idle(self._setup_mousewheel)
 
     def pack(self, **kw: Any) -> None:
@@ -216,7 +222,10 @@ class TabView:
             return
         self._current = name
         self._update_selection()
-        self._frame.after(50, self.scroll_to_current)
+        # If a rebuild is in progress, _relayout will handle scroll_to_current.
+        # Scheduling here too would cause a premature scroll before layout is done.
+        if not self._rebuild_in_progress:
+            self._schedule_scroll()
 
     def move_tab(self, old_index: int, new_index: int) -> None:
         """Move a tab from old_index to new_index."""
@@ -231,13 +240,13 @@ class TabView:
 
     def scroll_to_current(self) -> None:
         """Scroll the canvas so that the current tab's button is visible."""
+        self._scroll_after_id = None
         if not self._current or self._current not in self._buttons:
-            log.debug("scroll_to_current: skip (current=%s)", self._current)
             return
         btn = self._buttons[self._current]
         try:
-            # Force geometry calculation
-            self._inner.update_idletasks()
+            # Force geometry to be fully calculated before reading positions
+            self._frame.update_idletasks()
 
             # btn.winfo_y() is relative to its parent (row_frame),
             # so add the row_frame's y position within the inner frame.
@@ -246,38 +255,35 @@ class TabView:
             btn_h = btn.winfo_height()
             inner_h = self._inner.winfo_reqheight()
             canvas_h = self._canvas.winfo_height()
-            log.debug(
-                "scroll_to_current: tab=%s, btn_y=%s, btn_h=%s, "
-                "inner_h=%s, canvas_h=%s, yview=%s",
-                self._current, btn_y, btn_h, inner_h, canvas_h,
-                self._canvas.yview(),
-            )
-            if inner_h <= canvas_h:
-                log.debug("scroll_to_current: no scroll needed (inner fits)")
+            if inner_h <= canvas_h or inner_h <= 0:
                 return
-            top_frac = max(0, (btn_y - 2)) / inner_h
-            bot_frac = min(1.0, (btn_y + btn_h + 2)) / inner_h
+            top_frac = max(0.0, (btn_y - 2) / inner_h)
+            bot_frac = min(1.0, (btn_y + btn_h + 2) / inner_h)
             vis_lo, vis_hi = self._canvas.yview()
             if top_frac < vis_lo:
-                log.debug("scroll_to_current: scroll UP to %s", top_frac)
                 self._canvas.yview_moveto(top_frac)
             elif bot_frac > vis_hi:
                 target = bot_frac - (vis_hi - vis_lo)
-                log.debug("scroll_to_current: scroll DOWN to %s", target)
-                self._canvas.yview_moveto(target)
-            else:
-                log.debug("scroll_to_current: already visible")
-        except Exception as e:
-            log.debug("scroll_to_current: exception %s", e)
+                self._canvas.yview_moveto(max(0.0, target))
+        except Exception:
+            pass
+
+    def _schedule_scroll(self) -> None:
+        """Schedule a scroll_to_current, cancelling any pending one."""
+        if self._scroll_after_id is not None:
+            self._frame.after_cancel(self._scroll_after_id)
+        self._scroll_after_id = self._frame.after(100, self.scroll_to_current)
 
     # ---- internal ----
 
     def _rebuild(self) -> None:
         """Destroy everything and schedule a fresh layout."""
+        self._rebuild_in_progress = True
         self._clear_inner()
 
         if not self._names:
             self._update_scroll(0)
+            self._rebuild_in_progress = False
             return
 
         if not self._current or self._current not in self._names:
@@ -321,6 +327,11 @@ class TabView:
         # Keep inner frame width in sync with canvas
         self._canvas.itemconfigure(self._canvas_window, width=event.width)
 
+        # Suppress re-layout while a rebuild chain is active; the rebuild's
+        # own _relayout call will use the correct width.
+        if self._rebuild_in_progress:
+            return
+
         new_width = event.width
         if new_width != self._last_width and new_width > 1 and self._names:
             self._last_width = new_width
@@ -329,10 +340,19 @@ class TabView:
                 self._frame.after_idle(self._relayout)
 
     def _setup_mousewheel(self) -> None:
-        """Bind mouse-wheel to root so it works even over CTkButton internals."""
+        """Bind mouse-wheel / touchpad to root so it works over CTkButton internals.
+
+        Tk 9.0+ on macOS Aqua sends <TouchpadScroll> for trackpad gestures
+        (TIP 684) and <MouseWheel> only for an actual mouse wheel.
+        We bind both events so scrolling works with either input device.
+        """
         root = self._frame.winfo_toplevel()
         root.bind_all("<MouseWheel>", self._on_mousewheel, add="+")
-        log.debug("TabView: bind_all <MouseWheel> on %s", root)
+        # Tk 9.0+ (Aqua / Windows): <TouchpadScroll> for trackpad gestures
+        try:
+            root.bind_all("<TouchpadScroll>", self._on_touchpad_scroll, add="+")
+        except tk.TclError:
+            pass  # older Tk without TouchpadScroll support
 
     def _is_cursor_over_tabview(self, event: Any) -> bool:
         """Check if the mouse cursor is within the TabView canvas area."""
@@ -347,29 +367,37 @@ class TabView:
 
     def _on_mousewheel(self, event: Any) -> None:
         """Handle mouse-wheel scroll on the tab area (bind_all handler)."""
-        over = self._is_cursor_over_tabview(event)
-        log.debug(
-            "TabView mousewheel: delta=%s, x_root=%s, y_root=%s, over=%s, "
-            "canvas=(%s,%s,%s,%s), scrollregion=%s, yview=%s",
-            event.delta, event.x_root, event.y_root, over,
-            self._canvas.winfo_rootx(), self._canvas.winfo_rooty(),
-            self._canvas.winfo_width(), self._canvas.winfo_height(),
-            self._canvas.cget("scrollregion"), self._canvas.yview(),
-        )
-        if not over:
+        if not self._is_cursor_over_tabview(event):
             return
         # macOS: event.delta is ±1..N; Windows/Linux: ±120
         if IS_MAC:
             self._canvas.yview_scroll(-event.delta, "units")
         else:
             self._canvas.yview_scroll(-event.delta // 120, "units")
-        log.debug("TabView mousewheel: after scroll yview=%s", self._canvas.yview())
+
+    def _on_touchpad_scroll(self, event: Any) -> None:
+        """Handle touchpad scroll on the tab area (Tk 9.0+ TIP 684).
+
+        On Tk 9.0+ (macOS Aqua / Windows), trackpad two-finger scrolling
+        generates <TouchpadScroll> events.  The delta packs Δx (high 16 bits)
+        and Δy (low 16 bits) as signed 16-bit integers.
+        """
+        if not self._is_cursor_over_tabview(event):
+            return
+        # Extract Δy from low 16 bits (signed)
+        raw = event.delta
+        dy = raw & 0xFFFF
+        if dy >= 0x8000:
+            dy -= 0x10000
+        if dy != 0:
+            self._canvas.yview_scroll(-dy, "units")
 
     def _relayout(self) -> None:
         """Destroy and recreate buttons in wrapping rows (unlimited)."""
         self._relayout_pending = False
 
         if not self._names:
+            self._rebuild_in_progress = False
             return
 
         # Destroy old rows + buttons
@@ -426,8 +454,9 @@ class TabView:
 
         self._update_selection()
         self._update_scroll(len(rows))
-        # Scroll to current after layout settles (after_idle is too early)
-        self._frame.after(50, self.scroll_to_current)
+        # Mark rebuild complete, then schedule scroll (after geometry settles)
+        self._rebuild_in_progress = False
+        self._schedule_scroll()
 
     def _update_scroll(self, num_rows: int) -> None:
         """Set canvas height based on row count. Scrollbar is always visible."""

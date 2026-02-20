@@ -367,6 +367,66 @@ class TestTabGroups:
 
 
 # ============================================================
+# Copy tab group (base name extraction)
+# ============================================================
+
+
+class TestCopyTabGroup:
+    """Test copy_tab_group with base-name extraction and sequential naming."""
+
+    def test_copy_basic(self, tmp_config: ConfigManager) -> None:
+        """'テスト' -> 'テスト 1'"""
+        tmp_config.add_tab_group("テスト")
+        result = tmp_config.copy_tab_group("テスト")
+        assert result is not None
+        assert result.name == "テスト 1"
+
+    def test_copy_sequential(self, tmp_config: ConfigManager) -> None:
+        """'テスト' -> 'テスト 1' -> 'テスト 2'"""
+        tmp_config.add_tab_group("テスト")
+        tmp_config.copy_tab_group("テスト")
+        result = tmp_config.copy_tab_group("テスト")
+        assert result is not None
+        assert result.name == "テスト 2"
+
+    def test_copy_numbered_tab(self, tmp_config: ConfigManager) -> None:
+        """'テスト 1' -> 'テスト 2' (extracts base 'テスト')"""
+        tmp_config.add_tab_group("テスト 1")
+        result = tmp_config.copy_tab_group("テスト 1")
+        assert result is not None
+        assert result.name == "テスト 2"
+
+    def test_copy_numbered_tab_skips_existing(self, tmp_config: ConfigManager) -> None:
+        """'テスト 3' with 1,2,3 existing -> 'テスト 4'"""
+        tmp_config.add_tab_group("テスト 1")
+        tmp_config.add_tab_group("テスト 2")
+        tmp_config.add_tab_group("テスト 3")
+        result = tmp_config.copy_tab_group("テスト 3")
+        assert result is not None
+        assert result.name == "テスト 4"
+
+    def test_copy_fills_gap(self, tmp_config: ConfigManager) -> None:
+        """'テスト 3' with only 3 existing -> 'テスト 1' (fills gap)"""
+        tmp_config.add_tab_group("テスト 3")
+        result = tmp_config.copy_tab_group("テスト 3")
+        assert result is not None
+        assert result.name == "テスト 1"
+
+    def test_copy_preserves_paths(self, tmp_config: ConfigManager) -> None:
+        """Copy should preserve paths from source."""
+        tmp_config.add_tab_group("Work")
+        tmp_config.add_path_to_group("Work", r"C:\Projects")
+        result = tmp_config.copy_tab_group("Work")
+        assert result is not None
+        assert len(result.paths) == 1
+
+    def test_copy_nonexistent(self, tmp_config: ConfigManager) -> None:
+        """Copying non-existent group returns None."""
+        result = tmp_config.copy_tab_group("NoSuch")
+        assert result is None
+
+
+# ============================================================
 # Serialization compatibility
 # ============================================================
 

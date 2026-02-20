@@ -11,6 +11,7 @@ import json
 import logging
 import os
 import platform
+import re
 from dataclasses import dataclass, field
 from datetime import datetime
 from pathlib import Path
@@ -284,15 +285,25 @@ class ConfigManager:
             groups.insert(new_index, item)
 
     def copy_tab_group(self, name: str) -> TabGroup | None:
-        """Copy a tab group with an auto-incremented name (e.g., 'Tab 1' -> 'Tab 1 2')."""
+        """Copy a tab group with an auto-incremented name.
+
+        Extracts the base name by stripping a trailing number suffix,
+        then finds the next available number starting from 1.
+        Examples:
+            'テスト'   -> 'テスト 1' -> 'テスト 2' -> ...
+            'テスト 3' -> 'テスト 4' (or next available)
+        """
         source = self.get_tab_group(name)
         if not source:
             return None
+        # Extract base name: strip trailing ' <digits>'
+        m = re.match(r'^(.*?)\s+(\d+)$', name)
+        base = m.group(1) if m else name
         existing_names = {g.name for g in self.data.tab_groups}
-        suffix = 2
-        while f"{name} {suffix}" in existing_names:
+        suffix = 1
+        while f"{base} {suffix}" in existing_names:
             suffix += 1
-        new_name = f"{name} {suffix}"
+        new_name = f"{base} {suffix}"
         new_group = TabGroup(
             name=new_name,
             paths=list(source.paths),

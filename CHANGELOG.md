@@ -12,6 +12,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/).
 - Tk 9.0 `<TouchpadScroll>` event support for macOS trackpad scrolling
 - Thread exception notification via error dialog (previously silent)
 - Debug logging for scroll and mousewheel diagnostics
+- PyInstaller `.spec` file with proper macOS metadata (bundle ID, version, plist)
 
 ### Changed
 - **gui.py split into modules**: `main_window.py`, `widgets.py`, `tab_group.py`, `history.py` for maintainability

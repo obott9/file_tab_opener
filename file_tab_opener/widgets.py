@@ -138,8 +138,8 @@ class TabView:
         )
         self._canvas.configure(yscrollcommand=self._scrollbar.set)
 
+        self._scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
         self._canvas.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
-        # Scrollbar is packed/forgotten dynamically in _update_scroll
 
         # Inner frame drawn on the canvas
         self._inner = ttk.Frame(self._canvas)
@@ -208,11 +208,12 @@ class TabView:
         return self._current
 
     def set_current_tab(self, name: str) -> None:
-        """Select a tab by name."""
+        """Select a tab by name and scroll it into view."""
         if name not in self._names:
             return
         self._current = name
         self._update_selection()
+        self._frame.after_idle(self.scroll_to_current)
 
     def move_tab(self, old_index: int, new_index: int) -> None:
         """Move a tab from old_index to new_index."""
@@ -382,18 +383,11 @@ class TabView:
         self._frame.after_idle(self.scroll_to_current)
 
     def _update_scroll(self, num_rows: int) -> None:
-        """Show/hide scrollbar and set canvas height based on row count."""
+        """Set canvas height based on row count. Scrollbar is always visible."""
         row_h = self._ROW_HEIGHT + self._BTN_PAD_Y * 2
-        if num_rows <= self.VISIBLE_ROWS:
-            # All rows fit — use natural height, hide scrollbar
-            display_h = max(num_rows, 1) * row_h
-            self._canvas.configure(height=display_h)
-            self._scrollbar.pack_forget()
-        else:
-            # Need scrolling — cap height at VISIBLE_ROWS
-            display_h = self.VISIBLE_ROWS * row_h
-            self._canvas.configure(height=display_h)
-            self._scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
+        visible = min(num_rows, self.VISIBLE_ROWS)
+        display_h = max(visible, 1) * row_h
+        self._canvas.configure(height=display_h)
 
     def _update_selection(self) -> None:
         """Update the visual selection state of all buttons."""

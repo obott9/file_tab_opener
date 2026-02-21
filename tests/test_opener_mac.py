@@ -102,3 +102,24 @@ class TestBuildAppleScript:
         script = _build_applescript(["/a", "/b", "/c"])
         count = script.count('tell application "System Events"')
         assert count == 2
+
+    def test_retry_loop_for_tabs(self) -> None:
+        """Each additional tab uses a retry loop instead of fixed delay."""
+        script = _build_applescript(["/a", "/b"])
+        assert "repeat" in script
+        assert "exit repeat" in script
+        assert "on error" in script
+        # No fixed delay between keystroke and set target
+        assert "delay 0.5" not in script
+        assert "delay 0.3" not in script
+
+    def test_single_path_no_retry(self) -> None:
+        """Single path should not have retry loop."""
+        script = _build_applescript(["/a"])
+        assert "repeat" not in script
+
+    def test_retry_count_matches_constant(self) -> None:
+        """Retry count in generated script matches _RETRY_MAX."""
+        from file_tab_opener.opener_mac import _RETRY_MAX
+        script = _build_applescript(["/a", "/b"])
+        assert f"repeat {_RETRY_MAX} times" in script

@@ -21,6 +21,8 @@ log = logging.getLogger(__name__)
 
 # --- Constants ---
 _APPLESCRIPT_TIMEOUT = 30  # osascript execution timeout (seconds)
+_RETRY_MAX = 30            # max retries for set target (30 x 0.1s = 3s)
+_RETRY_DELAY = 0.1         # delay between retries (seconds)
 _ACCESSIBILITY_KEYWORDS = ("assistive", "アクセシビリティ", "辅助功能", "보조")
 
 
@@ -134,7 +136,13 @@ def _build_applescript(
     paths: list[str],
     window_rect: tuple[int, int, int, int] | None = None,
 ) -> str:
-    """Build an AppleScript to open folders as Finder tabs."""
+    """Build an AppleScript to open folders as Finder tabs.
+
+    Uses retry loops instead of fixed delays: after ⌘T, repeatedly
+    attempts `set target` until it succeeds (max _RETRY_MAX x _RETRY_DELAY).
+    This adapts to Mac speed — fast Macs proceed immediately, slow Macs
+    wait only as long as needed.
+    """
     lines: list[str] = []
     # First path: always create a new Finder window (not reuse existing)
     lines.append('tell application "Finder"')
@@ -144,11 +152,10 @@ def _build_applescript(
         x, y, w, h = window_rect
         lines.append(f"  set bounds of front Finder window to {{{x}, {y}, {x + w}, {y + h}}}")
     lines.append("end tell")
-    lines.append("")
-    lines.append("delay 0.5")
 
-    # Remaining paths: ⌘T for new tab, then set target
+    # Remaining paths: ⌘T for new tab, then retry set target until ready
     for path in paths[1:]:
+        escaped = _esc_applescript(path)
         lines.append("")
         lines.append('tell application "System Events"')
         lines.append('  tell process "Finder"')
@@ -156,15 +163,18 @@ def _build_applescript(
         lines.append("  end tell")
         lines.append("end tell")
         lines.append("")
-        lines.append("delay 0.3")
-        lines.append("")
-        lines.append('tell application "Finder"')
+        lines.append(f"repeat {_RETRY_MAX} times")
+        lines.append("  try")
+        lines.append('    tell application "Finder"')
         lines.append(
-            f'  set target of front Finder window to POSIX file "{_esc_applescript(path)}" as alias'
+            f'      set target of front Finder window to POSIX file "{escaped}" as alias'
         )
-        lines.append("end tell")
-        lines.append("")
-        lines.append("delay 0.3")
+        lines.append("    end tell")
+        lines.append("    exit repeat")
+        lines.append("  on error")
+        lines.append(f"    delay {_RETRY_DELAY}")
+        lines.append("  end try")
+        lines.append("end repeat")
 
     return "\n".join(lines)
 

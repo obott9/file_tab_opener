@@ -25,9 +25,10 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/).
 - CJK-aware tab button width estimation using `unicodedata.east_asian_width()`
 - Language switcher uses index-based lookup instead of name-based reverse search
 - Dynamic version resolution via `importlib.metadata` (removes hardcoded fallback)
+- **AppleScript tab opening**: replaced fixed delays with retry-based completion detection (adapts to Mac speed)
 - AppleScript helpers extracted to eliminate code duplication in `opener_mac.py`
 - Backward-compat re-exports in `gui.py` cleaned up
-- Test count: 116 passed, 1 skipped (was 68)
+- Test count: 119 passed, 1 skipped (was 68)
 
 ### Fixed
 - `_opening` flag double-reset race condition between timer and thread completion

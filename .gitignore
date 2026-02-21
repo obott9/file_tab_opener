@@ -20,6 +20,9 @@ build/
 *.swp
 *.swo
 
+# Assets (icon source PNGs)
+assets/
+
 # OS
 .DS_Store
 Thumbs.db

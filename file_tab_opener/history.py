@@ -25,6 +25,7 @@ from file_tab_opener.widgets import (
     Label,
     _strip_quotes,
     _setup_placeholder,
+    _is_placeholder_active,
 )
 
 log = logging.getLogger(__name__)
@@ -199,6 +200,11 @@ class HistorySection:
         if not sel:
             return
         value = self._dropdown_listbox.get(sel[0])
+        # Strip display prefix (📌 or spaces) to get the raw path
+        if value.startswith(_PIN_PREFIX):
+            value = value[len(_PIN_PREFIX):]
+        elif value.startswith(_UNPIN_PREFIX):
+            value = value[len(_UNPIN_PREFIX):]
         self.entry.delete(0, tk.END)
         self.entry.insert(0, value)
         self._close_dropdown()
@@ -214,9 +220,9 @@ class HistorySection:
 
     def _get_selected_path(self) -> str:
         """Extract the raw path from entry text (strip prefix only)."""
-        text = self.entry.get().strip()
-        if text == t("path.placeholder"):
+        if _is_placeholder_active(self.entry):
             return ""
+        text = self.entry.get().strip()
         if text.startswith(_PIN_PREFIX):
             text = text[len(_PIN_PREFIX):]
         elif text.startswith(_UNPIN_PREFIX):

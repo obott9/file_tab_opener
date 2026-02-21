@@ -20,21 +20,21 @@ from file_tab_opener.opener_mac import validate_paths, _build_applescript
 class TestValidatePaths:
     """Test validate_paths with mocked filesystem."""
 
-    @patch("file_tab_opener.opener_mac.Path.is_dir")
+    @patch("file_tab_opener.Path.is_dir")
     def test_all_valid(self, mock_is_dir) -> None:
         mock_is_dir.return_value = True
         valid, invalid = validate_paths(["/Users/test/Documents", "/Users/test/Downloads"])
         assert len(valid) == 2
         assert len(invalid) == 0
 
-    @patch("file_tab_opener.opener_mac.Path.is_dir")
+    @patch("file_tab_opener.Path.is_dir")
     def test_all_invalid(self, mock_is_dir) -> None:
         mock_is_dir.return_value = False
         valid, invalid = validate_paths(["/nonexistent/a", "/nonexistent/b"])
         assert len(valid) == 0
         assert len(invalid) == 2
 
-    @patch("file_tab_opener.opener_mac.Path.is_dir")
+    @patch("file_tab_opener.Path.is_dir")
     def test_mixed(self, mock_is_dir) -> None:
         mock_is_dir.side_effect = [True, False, True]
         valid, invalid = validate_paths(["/good/a", "/bad/b", "/good/c"])
@@ -47,7 +47,7 @@ class TestValidatePaths:
         assert valid == []
         assert invalid == []
 
-    @patch("file_tab_opener.opener_mac.Path.is_dir")
+    @patch("file_tab_opener.Path.is_dir")
     def test_expanduser(self, mock_is_dir) -> None:
         """Paths with ~ should be expanded."""
         mock_is_dir.return_value = True

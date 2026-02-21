@@ -29,6 +29,7 @@ from file_tab_opener.widgets import (
     TabView,
     _strip_quotes,
     _setup_placeholder,
+    _is_placeholder_active,
 )
 
 log = logging.getLogger(__name__)
@@ -222,12 +223,16 @@ class TabGroupSection:
             self._refresh_listbox()
             self._load_geometry()
 
+    def restore_tab_state(self) -> None:
+        """Refresh the listbox and geometry fields for the current tab."""
+        self._refresh_listbox()
+        self._load_geometry()
+
     def _on_tab_changed(self, tab_name: str) -> None:
         """Handle tab selection change."""
         self._save_geometry()
         self.current_tab_name = tab_name
-        self._refresh_listbox()
-        self._load_geometry()
+        self.restore_tab_state()
 
     def _refresh_listbox(self) -> None:
         """Update the listbox with paths from the current tab group."""
@@ -356,9 +361,9 @@ class TabGroupSection:
 
     def _on_add_path(self) -> None:
         """Handle the Add Path button click or Enter key in path entry."""
+        if _is_placeholder_active(self.path_entry):
+            return
         raw = self.path_entry.get().strip()
-        if raw == t("path.placeholder"):
-            raw = ""
         path = _strip_quotes(raw)
         if not path:
             return

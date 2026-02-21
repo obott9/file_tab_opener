@@ -17,6 +17,18 @@ from typing import Any
 
 log = logging.getLogger(__name__)
 
+__all__ = [
+    "CTK_AVAILABLE",
+    "IS_MAC",
+    "IS_WIN",
+    "get_root",
+    "Frame",
+    "Button",
+    "Label",
+    "Entry",
+    "TabView",
+]
+
 IS_MAC = platform.system() == "Darwin"
 IS_WIN = platform.system() == "Windows"
 
@@ -96,20 +108,34 @@ def _text_display_width(text: str) -> int:
 
 def _setup_placeholder(entry: ttk.Entry, placeholder: str) -> None:
     """Add placeholder text to a ttk.Entry (grey hint when empty)."""
+    entry._placeholder_active = True  # type: ignore[attr-defined]
+
     def _on_focus_in(_event: Any) -> None:
-        if entry.get() == placeholder:
+        if entry._placeholder_active:  # type: ignore[attr-defined]
             entry.delete(0, tk.END)
             entry.configure(foreground="")
+            entry._placeholder_active = False  # type: ignore[attr-defined]
 
     def _on_focus_out(_event: Any) -> None:
         if not entry.get():
             entry.insert(0, placeholder)
             entry.configure(foreground="grey")
+            entry._placeholder_active = True  # type: ignore[attr-defined]
 
     entry.insert(0, placeholder)
     entry.configure(foreground="grey")
     entry.bind("<FocusIn>", _on_focus_in, add="+")
     entry.bind("<FocusOut>", _on_focus_out, add="+")
+
+
+def _is_placeholder_active(entry: Any) -> bool:
+    """Check if the entry is currently showing placeholder text."""
+    if CTK_AVAILABLE:
+        import customtkinter as _ctk
+        if isinstance(entry, _ctk.CTkEntry):
+            # CTkEntry shows placeholder when _entry widget is empty
+            return entry.get() == ""
+    return getattr(entry, "_placeholder_active", False)
 
 
 # ============================================================

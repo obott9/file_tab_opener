@@ -27,10 +27,16 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/).
 - Dynamic version resolution via `importlib.metadata` (removes hardcoded fallback)
 - **AppleScript tab opening**: replaced fixed delays with retry-based completion detection (adapts to Mac speed)
 - AppleScript helpers extracted to eliminate code duplication in `opener_mac.py`
+- `validate_paths` extracted to `__init__.py` (shared by `opener_mac` and `opener_win`)
+- `widgets.py` now defines `__all__` to control wildcard exports
+- `TabGroupSection.restore_tab_state()` public API (replaces private method calls from MainWindow)
 - Backward-compat re-exports in `gui.py` cleaned up
 - Test count: 119 passed, 1 skipped (was 68)
 
 ### Fixed
+- `TclError` crash when window closed during tab-opening thread (`root.after` in worker)
+- History dropdown selection now strips display prefix (📌/spaces) before inserting into entry
+- Placeholder detection uses flag instead of fragile string comparison
 - `_opening` flag double-reset race condition between timer and thread completion
 - `TclError` in history dropdown FocusOut when widget already destroyed
 - `normpath` mismatch in pin toggle (expanduser-only value passed to normpath comparison)

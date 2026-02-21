@@ -118,8 +118,7 @@ class MainWindow:
             if saved_tab_name in names:
                 self.tab_group_section.tab_view.set_current_tab(saved_tab_name)
                 self.tab_group_section.current_tab_name = saved_tab_name
-                self.tab_group_section._refresh_listbox()
-                self.tab_group_section._load_geometry()
+                self.tab_group_section.restore_tab_state()
 
     def _on_timeout_changed(self, event: Any) -> None:
         """Handle timeout change from the combobox."""
@@ -171,12 +170,18 @@ class MainWindow:
 
         timeout = self._get_timeout()
 
+        def safe_after(callback: Any) -> None:
+            """Schedule callback on main thread, ignoring TclError if window closed."""
+            try:
+                self.root.after(0, callback)
+            except tk.TclError:
+                pass
+
         def do_open() -> None:
             try:
                 self.opener.open_folders_as_tabs(
                     valid,
-                    on_error=lambda p, e: self.root.after(
-                        0,
+                    on_error=lambda p, e: safe_after(
                         lambda: messagebox.showerror(
                             t("error.title"),
                             t("error.open_failed", path=p, error=e),
@@ -187,8 +192,7 @@ class MainWindow:
                     window_rect=window_rect,
                 )
             except Exception as e:
-                self.root.after(
-                    0,
+                safe_after(
                     lambda: messagebox.showerror(
                         t("error.title"),
                         str(e),
@@ -196,7 +200,7 @@ class MainWindow:
                     ),
                 )
             finally:
-                self.root.after(0, self._reset_tab_opening_flag)
+                safe_after(self._reset_tab_opening_flag)
 
         threading.Thread(target=do_open, daemon=True).start()
 

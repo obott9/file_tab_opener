@@ -20,7 +20,6 @@ import os
 import subprocess
 import time
 from collections.abc import Callable
-from pathlib import Path
 
 log = logging.getLogger(__name__)
 
@@ -233,17 +232,8 @@ def _wait_for_navigation(addr_edit: object, timeout: float = 30.0) -> bool:
 
 # --- Public interface ---
 
-def validate_paths(paths: list[str]) -> tuple[list[str], list[str]]:
-    """Validate paths. Returns (valid_paths, invalid_paths)."""
-    valid: list[str] = []
-    invalid: list[str] = []
-    for p in paths:
-        expanded = os.path.expanduser(p)
-        if Path(expanded).is_dir():
-            valid.append(expanded)
-        else:
-            invalid.append(p)
-    return valid, invalid
+# Re-export from package root (shared with opener_mac)
+from file_tab_opener import validate_paths as validate_paths  # noqa: F401
 
 
 def open_single_folder(

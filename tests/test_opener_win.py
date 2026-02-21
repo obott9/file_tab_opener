@@ -34,14 +34,14 @@ from file_tab_opener.opener_win import (
 class TestValidatePaths:
     """Test validate_paths with mocked filesystem."""
 
-    @patch("file_tab_opener.opener_win.Path.is_dir")
+    @patch("file_tab_opener.Path.is_dir")
     def test_all_valid(self, mock_is_dir: MagicMock) -> None:
         mock_is_dir.return_value = True
         valid, invalid = validate_paths([r"C:\Users\test\Documents"])
         assert len(valid) == 1
         assert len(invalid) == 0
 
-    @patch("file_tab_opener.opener_win.Path.is_dir")
+    @patch("file_tab_opener.Path.is_dir")
     def test_expanduser(self, mock_is_dir: MagicMock) -> None:
         """Paths with ~ should be expanded."""
         mock_is_dir.return_value = True

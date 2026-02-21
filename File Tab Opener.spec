@@ -54,10 +54,10 @@ app = BUNDLE(
     name='File Tab Opener.app',
     icon='FileTabOpener.icns',
     bundle_identifier='com.obott9.file-tab-opener',
-    version='1.0.0',
+    version='1.1.0',
     info_plist={
-        'CFBundleShortVersionString': '1.0.0',
-        'CFBundleVersion': '1.0.0',
+        'CFBundleShortVersionString': '1.1.0',
+        'CFBundleVersion': '1.1.0',
         'LSMinimumSystemVersion': '12.0',
         'NSAppleEventsUsageDescription':
             'File Tab Opener uses AppleScript to open folders as tabs in Finder.',

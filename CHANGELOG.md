@@ -13,6 +13,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/).
 - Thread exception notification via error dialog (previously silent)
 - Debug logging for scroll and mousewheel diagnostics
 - PyInstaller `.spec` file with proper macOS metadata (bundle ID, version, plist)
+- GitHub Actions CI/CD workflow for cross-platform testing (Ubuntu, macOS, Windows × Python 3.10–3.13)
 - Custom app icon (`FileTabOpener.icns`)
 
 ### Changed

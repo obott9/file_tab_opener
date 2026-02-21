@@ -16,6 +16,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/).
 - Custom app icon (`FileTabOpener.icns`)
 
 ### Changed
+- **macOS config path**: moved from `~/.file_tab_opener.json` to `~/Library/Application Support/FileTabOpener/config.json` (macOS standard)
 - **gui.py split into modules**: `main_window.py`, `widgets.py`, `tab_group.py`, `history.py` for maintainability
 - TabView layout: auto-wrap buttons with scrollable area (replaces fixed 4-row limit)
 - Tab group copy naming: base name extraction convention (`"Work"` → `"Work 1"` → `"Work 2"`)

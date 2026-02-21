@@ -98,8 +98,13 @@ Windows Explorerにはタブ操作用の公開APIがありません。すべて�
 | OS | パス |
 |----|------|
 | Windows | `%APPDATA%\FileTabOpener\config.json` |
-| macOS | `~/.file_tab_opener.json` |
+| macOS | `~/Library/Application Support/FileTabOpener/config.json` |
 | Linux | `~/.config/file_tab_opener/config.json` |
+
+> **v1.0.0からのアップグレード:** macOSの設定ファイルパスが `~/.file_tab_opener.json` から変更されました。移行するには:
+> ```bash
+> mv ~/.file_tab_opener.json ~/Library/Application\ Support/FileTabOpener/config.json
+> ```
 
 ## ログ
 

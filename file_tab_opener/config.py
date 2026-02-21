@@ -37,7 +37,7 @@ def get_config_path() -> Path:
     """Return the OS-specific configuration file path."""
     system = platform.system()
     if system == "Darwin":
-        return Path.home() / ".file_tab_opener.json"
+        return Path.home() / "Library" / "Application Support" / "FileTabOpener" / "config.json"
     elif system == "Windows":
         appdata = os.environ.get("APPDATA", "")
         if appdata:

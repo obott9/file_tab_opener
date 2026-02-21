@@ -98,8 +98,13 @@ Settings are stored in a JSON file:
 | OS | Path |
 |----|------|
 | Windows | `%APPDATA%\FileTabOpener\config.json` |
-| macOS | `~/.file_tab_opener.json` |
+| macOS | `~/Library/Application Support/FileTabOpener/config.json` |
 | Linux | `~/.config/file_tab_opener/config.json` |
+
+> **Upgrading from v1.0.0:** The macOS config path changed from `~/.file_tab_opener.json`. To migrate, move the old file:
+> ```bash
+> mv ~/.file_tab_opener.json ~/Library/Application\ Support/FileTabOpener/config.json
+> ```
 
 ## Logging
 

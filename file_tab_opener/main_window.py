@@ -6,6 +6,7 @@ Composes HistorySection and TabGroupSection into the application window.
 
 from __future__ import annotations
 
+import logging
 import threading
 import tkinter as tk
 import tkinter.ttk as ttk
@@ -15,9 +16,16 @@ from typing import Any
 from file_tab_opener.config import ConfigManager
 from file_tab_opener import i18n
 from file_tab_opener.i18n import t, SUPPORTED_LANGS, LANG_NAMES
-from file_tab_opener.widgets import Frame, Label, get_root
+from file_tab_opener.widgets import CTK_AVAILABLE, Frame, Label, get_root
 from file_tab_opener.history import HistorySection
 from file_tab_opener.tab_group import TabGroupSection
+
+
+log = logging.getLogger(__name__)
+
+# Import ctk only when available
+if CTK_AVAILABLE:
+    import customtkinter as ctk
 
 
 class MainWindow:
@@ -128,6 +136,7 @@ class MainWindow:
             return
         self.config.data.settings["timeout"] = value
         self.config.save()
+        log.info("Timeout changed to %d seconds", value)
 
     def _on_language_changed(self, event: Any) -> None:
         """Handle language switch from the combobox."""
@@ -136,9 +145,11 @@ class MainWindow:
             return
         code = SUPPORTED_LANGS[idx]
         if code != i18n.get_language():
+            old_lang = i18n.get_language()
             i18n.set_language(code)
             self.config.data.settings["language"] = code
             self.config.save()
+            log.info("Language changed: %s -> %s", old_lang, code)
             self.root.title(t("app.title"))
             self._build_content()
 
@@ -152,26 +163,31 @@ class MainWindow:
 
     def _open_single_folder(self, path: str) -> None:
         """Open a single folder."""
+        log.info("Opening single folder: %s", path)
         self.opener.open_single_folder(path)
 
     def _open_folders_as_tabs(
         self, paths: list[str], window_rect: tuple[int, int, int, int] | None = None,
     ) -> None:
         """Open multiple folders as tabs (runs in a worker thread)."""
+        log.info("Opening folders as tabs: %d paths", len(paths))
         valid, invalid = self.opener.validate_paths(paths)
         if invalid:
+            log.warning("Invalid paths: %s", invalid)
             messagebox.showwarning(
                 t("error.invalid_paths_title"),
                 t("error.invalid_paths_msg", paths="\n".join(invalid)),
                 parent=self.root,
             )
         if not valid:
+            log.warning("No valid paths to open")
             return
 
         timeout = self._get_timeout()
 
-        # Show wait cursor while tabs are being opened
+        # Show wait cursor and toast while tabs are being opened
         self._set_cursor("wait")
+        self._show_toast()
 
         def safe_after(callback: Any) -> None:
             """Schedule callback on main thread, ignoring TclError if window closed."""
@@ -195,6 +211,7 @@ class MainWindow:
                     window_rect=window_rect,
                 )
             except Exception as e:
+                log.error("Failed to open tabs: %s", e, exc_info=True)
                 safe_after(
                     lambda: messagebox.showerror(
                         t("error.title"),
@@ -219,16 +236,69 @@ class MainWindow:
 
         _apply(self.root)
 
+    def _show_toast(self) -> None:
+        """Show a toast notification centered on the app window.
+
+        Uses place() with relative coordinates to avoid multi-monitor /
+        DPI-scaling issues that occur with Toplevel absolute positioning.
+        """
+        self._hide_toast()
+
+        # Match app theme (same pattern as history.py / tab_group.py)
+        bg, fg, border = "#e0e0e0", "#333333", "#bbbbbb"
+        if CTK_AVAILABLE:
+            try:
+                if ctk.get_appearance_mode() == "Dark":
+                    bg, fg, border = "#2b2b2b", "#ffffff", "#555555"
+            except Exception as e:
+                log.debug("Theme detection failed, using light defaults: %s", e)
+
+        toast = tk.Frame(
+            self.root, bg=bg,
+            highlightthickness=2, highlightbackground=border,
+        )
+        toast.place(
+            relx=0.5, rely=0.5, anchor="center",
+            relwidth=0.5, relheight=0.5,
+        )
+
+        tk.Label(
+            toast,
+            text=t("toast.opening_tabs"),
+            bg=bg, fg=fg,
+            font=("", 13),
+            justify="center",
+        ).place(relx=0.5, rely=0.5, anchor="center")
+
+        toast.lift()
+        self._toast = toast
+        self.root.update_idletasks()
+        log.debug("Toast shown (place overlay on root)")
+
+    def _hide_toast(self) -> None:
+        """Dismiss the toast notification if shown."""
+        toast = getattr(self, "_toast", None)
+        if toast is not None:
+            try:
+                toast.destroy()
+            except tk.TclError:
+                pass
+            self._toast = None
+            log.debug("Toast hidden")
+
     def _reset_tab_opening_flag(self) -> None:
         """Reset the tab group section's opening flag and cursor from the main thread."""
+        self._hide_toast()
         if hasattr(self, "tab_group_section"):
             self.tab_group_section._opening = False
         self._set_cursor("")
 
     def _on_close(self) -> None:
         """Save window geometry and close."""
-        self.config.data.window_geometry = self.root.geometry()
+        geom = self.root.geometry()
+        self.config.data.window_geometry = geom
         self.config.save()
+        log.info("Window closed (geometry: %s)", geom)
         self.root.destroy()
 
     def run(self) -> None:

@@ -348,6 +348,15 @@ _STRINGS: Final[dict[str, dict[str, str]]] = {
                  "并启用 Terminal.app 的访问权限。",
     },
 
+    # --- Toast notification ---
+    "toast.opening_tabs": {
+        "en": "Opening tabs...\nPlease wait.\nDo not use the keyboard or mouse.",
+        "ja": "タブを展開中...\nしばらくお待ちください。\nキーボード・マウスを操作しないでください",
+        "ko": "탭 열는 중...\n잠시 기다려 주세요.\n키보드와 마우스를 사용하지 마세요.",
+        "zh_TW": "正在開啟分頁...\n請稍候。\n請勿使用鍵盤或滑鼠。",
+        "zh_CN": "正在打开标签页...\n请稍候。\n请勿使用键盘或鼠标。",
+    },
+
     # --- Window geometry ---
     "window.x": {
         "en": "X:",

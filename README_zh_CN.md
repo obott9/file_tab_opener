@@ -101,7 +101,6 @@ Windows 资源管理器没有标签页操作的公开 API。所有方式都依�
 |----|------|
 | Windows | `%APPDATA%\FileTabOpener\config.json` |
 | macOS | `~/Library/Application Support/FileTabOpener/config.json` |
-| Linux | `~/.config/file_tab_opener/config.json` |
 
 > **从 v1.0.0 升级：** macOS 配置文件路径已从 `~/.file_tab_opener.json` 变更。迁移方式：
 > ```bash
@@ -123,7 +122,6 @@ Windows 资源管理器没有标签页操作的公开 API。所有方式都依�
 |----|------|
 | Windows | `%APPDATA%\FileTabOpener\debug.log` |
 | macOS | `~/Library/Logs/FileTabOpener/debug.log` |
-| Linux | `~/.local/share/FileTabOpener/debug.log` |
 
 ## 开发
 

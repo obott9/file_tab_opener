@@ -113,7 +113,6 @@ UNCパス（`\\server\share`）に対応しています。ネットワーク共�
 |----|------|
 | Windows | `%APPDATA%\FileTabOpener\config.json` |
 | macOS | `~/Library/Application Support/FileTabOpener/config.json` |
-| Linux | `~/.config/file_tab_opener/config.json` |
 
 > **v1.0.0からのアップグレード:** macOSの設定ファイルパスが `~/.file_tab_opener.json` から変更されました。移行するには:
 > ```bash
@@ -135,7 +134,6 @@ UNCパス（`\\server\share`）に対応しています。ネットワーク共�
 |----|------|
 | Windows | `%APPDATA%\FileTabOpener\debug.log` |
 | macOS | `~/Library/Logs/FileTabOpener/debug.log` |
-| Linux | `~/.local/share/FileTabOpener/debug.log` |
 
 ## 開発
 

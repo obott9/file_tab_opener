@@ -101,7 +101,6 @@ Windows 탐색기에는 탭 조작용 공개 API가 없습니다. 모든 방식�
 |----|------|
 | Windows | `%APPDATA%\FileTabOpener\config.json` |
 | macOS | `~/Library/Application Support/FileTabOpener/config.json` |
-| Linux | `~/.config/file_tab_opener/config.json` |
 
 > **v1.0.0에서 업그레이드:** macOS 설정 파일 경로가 `~/.file_tab_opener.json`에서 변경되었습니다. 마이그레이션:
 > ```bash
@@ -123,7 +122,6 @@ Windows 탐색기에는 탭 조작용 공개 API가 없습니다. 모든 방식�
 |----|------|
 | Windows | `%APPDATA%\FileTabOpener\debug.log` |
 | macOS | `~/Library/Logs/FileTabOpener/debug.log` |
-| Linux | `~/.local/share/FileTabOpener/debug.log` |
 
 ## 개발
 

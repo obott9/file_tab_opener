@@ -113,7 +113,6 @@ Settings are stored in a JSON file:
 |----|------|
 | Windows | `%APPDATA%\FileTabOpener\config.json` |
 | macOS | `~/Library/Application Support/FileTabOpener/config.json` |
-| Linux | `~/.config/file_tab_opener/config.json` |
 
 > **Upgrading from v1.0.0:** The macOS config path changed from `~/.file_tab_opener.json`. To migrate, move the old file:
 > ```bash
@@ -135,7 +134,6 @@ Log file location:
 |----|------|
 | Windows | `%APPDATA%\FileTabOpener\debug.log` |
 | macOS | `~/Library/Logs/FileTabOpener/debug.log` |
-| Linux | `~/.local/share/FileTabOpener/debug.log` |
 
 ## Development
 

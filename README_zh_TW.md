@@ -101,7 +101,6 @@ Windows 檔案總管沒有分頁操作的公開 API。所有方式都依賴 UI �
 |----|------|
 | Windows | `%APPDATA%\FileTabOpener\config.json` |
 | macOS | `~/Library/Application Support/FileTabOpener/config.json` |
-| Linux | `~/.config/file_tab_opener/config.json` |
 
 > **從 v1.0.0 升級：** macOS 設定檔路徑已從 `~/.file_tab_opener.json` 變更。遷移方式：
 > ```bash
@@ -123,7 +122,6 @@ Windows 檔案總管沒有分頁操作的公開 API。所有方式都依賴 UI �
 |----|------|
 | Windows | `%APPDATA%\FileTabOpener\debug.log` |
 | macOS | `~/Library/Logs/FileTabOpener/debug.log` |
-| Linux | `~/.local/share/FileTabOpener/debug.log` |
 
 ## 開發
 

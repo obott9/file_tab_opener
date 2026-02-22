@@ -39,7 +39,7 @@ exe = EXE(
     target_arch=None,
     codesign_identity=None,
     entitlements_file=None,
-    icon='FileTabOpener.ico',
+    icon='assets/FileTabOpener.ico',
 )
 coll = COLLECT(
     exe,
@@ -53,7 +53,7 @@ coll = COLLECT(
 app = BUNDLE(
     coll,
     name='File Tab Opener.app',
-    icon='FileTabOpener.icns',
+    icon='assets/FileTabOpener.icns',
     bundle_identifier='com.obott9.file-tab-opener',
     version='1.1.0',
     info_plist={

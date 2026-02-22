@@ -23,10 +23,6 @@ from collections.abc import Callable
 
 log = logging.getLogger(__name__)
 
-# --- Timeout constants ---
-_WINDOW_FIND_TIMEOUT = 10.0  # Max wait for new Explorer window detection (seconds)
-_WINDOW_FIND_TIMEOUT_SHORT = 5.0  # Shorter timeout for single/separate windows
-
 # --- ctypes SendInput constants and structures ---
 INPUT_KEYBOARD = 1
 KEYEVENTF_KEYUP = 0x0002
@@ -295,7 +291,7 @@ def open_single_folder(
         before_hwnds = _enum_explorer_hwnds() if window_rect else []
         subprocess.Popen(["explorer.exe", os.path.normpath(path)])
         if window_rect:
-            hwnd = _find_new_explorer_hwnd(before_hwnds, timeout=_WINDOW_FIND_TIMEOUT_SHORT)
+            hwnd = _find_new_explorer_hwnd(before_hwnds, timeout=5.0)
             if hwnd:
                 _apply_window_rect(hwnd, window_rect)
         return True
@@ -382,8 +378,7 @@ def _open_tabs_pywinauto_uia(
     log.debug("Launched explorer.exe: %s", first_path)
 
     # Wait for the new window to appear
-    find_timeout = min(timeout, _WINDOW_FIND_TIMEOUT)
-    new_hwnd = _find_new_explorer_hwnd(before_hwnds, timeout=find_timeout)
+    new_hwnd = _find_new_explorer_hwnd(before_hwnds, timeout=timeout)
     if not new_hwnd:
         raise RuntimeError("New Explorer window not found")
 
@@ -570,14 +565,13 @@ def _open_tabs_ctypes(
         on_progress(1, len(paths), paths[0])
 
     if len(paths) == 1:
-        hwnd = _find_new_explorer_hwnd(before_hwnds, timeout=min(timeout, _WINDOW_FIND_TIMEOUT))
+        hwnd = _find_new_explorer_hwnd(before_hwnds, timeout=timeout)
         if hwnd and window_rect:
             _apply_window_rect(hwnd, window_rect)
         return True
 
     # Bring the new Explorer window to the foreground
-    find_timeout = min(timeout, _WINDOW_FIND_TIMEOUT)
-    hwnd = _find_new_explorer_hwnd(before_hwnds, timeout=find_timeout)
+    hwnd = _find_new_explorer_hwnd(before_hwnds, timeout=timeout)
     if not hwnd:
         raise RuntimeError("New Explorer window not found")
     _bring_to_foreground(hwnd)
@@ -623,7 +617,7 @@ def _open_tabs_separate(
             before_hwnds = _enum_explorer_hwnds() if window_rect else []
             subprocess.Popen(["explorer.exe", os.path.normpath(path)])
             if window_rect:
-                hwnd = _find_new_explorer_hwnd(before_hwnds, timeout=_WINDOW_FIND_TIMEOUT_SHORT)
+                hwnd = _find_new_explorer_hwnd(before_hwnds, timeout=5.0)
                 if hwnd:
                     _apply_window_rect(hwnd, window_rect)
             if on_progress:

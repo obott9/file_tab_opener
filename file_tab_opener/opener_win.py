@@ -155,22 +155,6 @@ def _bring_to_foreground(hwnd: int) -> None:
     ctypes.windll.user32.SetForegroundWindow(hwnd)
 
 
-def _save_foreground() -> int:
-    """Return the current foreground window handle."""
-    return ctypes.windll.user32.GetForegroundWindow()
-
-
-def _restore_foreground(prev_fg: int) -> None:
-    """Restore the foreground window that was active before UIA set_focus.
-
-    UIA SetFocus brings the target window to the foreground as a side effect.
-    This restores the previous foreground window so the user's keyboard input
-    is not disrupted.
-    """
-    if prev_fg:
-        ctypes.windll.user32.SetForegroundWindow(prev_fg)
-
-
 def _post_enter_key(hwnd: int) -> None:
     """Send Enter key to a specific window via PostMessage.
 
@@ -187,25 +171,6 @@ def _apply_window_rect(hwnd: int, window_rect: tuple[int, int, int, int]) -> Non
     x, y, w, h = window_rect
     ctypes.windll.user32.MoveWindow(hwnd, x, y, w, h, True)
     log.debug("Applied window rect: hwnd=%s, x=%d, y=%d, w=%d, h=%d", hwnd, x, y, w, h)
-
-
-def _get_window_rect(hwnd: int) -> tuple[int, int, int, int]:
-    """Get current window position and size as (x, y, width, height)."""
-    rect = wintypes.RECT()
-    ctypes.windll.user32.GetWindowRect(hwnd, ctypes.byref(rect))
-    return (rect.left, rect.top, rect.right - rect.left, rect.bottom - rect.top)
-
-
-def _move_offscreen(hwnd: int) -> tuple[int, int, int, int]:
-    """Move window off-screen, return the original (x, y, w, h).
-
-    The window remains "visible" to the OS so UIA operations work,
-    but the user cannot see it.
-    """
-    saved = _get_window_rect(hwnd)
-    ctypes.windll.user32.MoveWindow(hwnd, -32000, -32000, saved[2], saved[3], True)
-    log.debug("Moved off-screen: hwnd=%s, saved rect=%s", hwnd, saved)
-    return saved
 
 
 def _is_explorer_hwnd(hwnd: int) -> bool:
@@ -395,18 +360,8 @@ def _open_tabs_pywinauto_uia(
     app = Application(backend="uia").connect(handle=new_hwnd)
     win = app.window(handle=new_hwnd)
 
-    # Save user's foreground window before any UIA focus operations
-    prev_fg = _save_foreground()
-
     win.set_focus()
     log.debug("Connected via UIA: hwnd=%s", new_hwnd)
-
-    # Move window off-screen during tab operations (invisible to user)
-    saved_rect = _move_offscreen(new_hwnd)
-
-    # Restore user's foreground window (set_focus steals it)
-    _restore_foreground(prev_fg)
-    log.debug("Restored foreground: hwnd=%s", prev_fg)
 
     # --- Discover UIA elements for keystroke-free automation ---
 
@@ -462,9 +417,7 @@ def _open_tabs_pywinauto_uia(
             for attempt in range(3):
                 # Focus (UIA set_focus → Ctrl+L fallback)
                 try:
-                    fg_before = _save_foreground()
                     addr_edit.set_focus()
-                    _restore_foreground(fg_before)
                     log.debug("Address bar focused via UIA (attempt %d)", attempt + 1)
                 except Exception as e:
                     log.debug("UIA set_focus failed (%s), Ctrl+L fallback", e)
@@ -538,8 +491,9 @@ def _open_tabs_pywinauto_uia(
             if on_error:
                 on_error(path, str(e))
 
-    # Move window to final position and bring to foreground
-    _apply_window_rect(new_hwnd, window_rect or saved_rect)
+    # Apply requested window position and bring to foreground
+    if window_rect:
+        _apply_window_rect(new_hwnd, window_rect)
     _bring_to_foreground(new_hwnd)
 
     return True

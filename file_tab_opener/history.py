@@ -105,7 +105,9 @@ class HistorySection:
         """Show the custom scrollable dropdown below the entry."""
         values = self._get_dropdown_values()
         if not values:
+            log.debug("Dropdown: no history entries to show")
             return
+        log.debug("Dropdown opened: %d entries", len(values))
 
         self._dropdown_win = tk.Toplevel(self.frame)
         self._dropdown_win.wm_overrideredirect(True)
@@ -125,8 +127,8 @@ class HistorySection:
                 mode = ctk.get_appearance_mode()
                 if mode == "Dark":
                     bg_color = "#2b2b2b"
-            except Exception:
-                pass
+            except Exception as e:
+                log.debug("Theme detection failed: %s", e)
         self._dropdown_win.configure(bg=bg_color)
 
         list_frame = ttk.Frame(self._dropdown_win)
@@ -161,8 +163,8 @@ class HistorySection:
                     self._dropdown_listbox.configure(
                         bg="#2b2b2b", fg="#ffffff", selectbackground="#1f6aa5",
                     )
-            except Exception:
-                pass
+            except Exception as e:
+                log.debug("Theme detection failed for listbox: %s", e)
 
         self._dropdown_listbox.bind("<<ListboxSelect>>", self._on_dropdown_select)
 
@@ -189,6 +191,7 @@ class HistorySection:
         """Close the custom dropdown."""
         if self._dropdown_win and self._dropdown_win.winfo_exists():
             self._dropdown_win.destroy()
+            log.debug("Dropdown closed")
         self._dropdown_win = None
         self._dropdown_listbox = None
 
@@ -236,12 +239,14 @@ class HistorySection:
             return
         expanded = os.path.expanduser(path)
         if Path(expanded).is_dir():
+            log.info("Opening folder from history: %s", expanded)
             self.config.add_history(expanded)
             self.config.save()
             self.entry.delete(0, tk.END)
             self.entry.insert(0, expanded)
             self.on_open_folder(expanded)
         else:
+            log.warning("Invalid path entered: %s", path)
             messagebox.showwarning(
                 t("history.invalid_path_title"),
                 t("history.invalid_path_msg", path=path),
@@ -264,6 +269,7 @@ class HistorySection:
             self.config.add_history(expanded)
         self.config.toggle_pin(normalized)
         self.config.save()
+        log.info("Pin toggled for: %s", normalized)
 
     def _on_clear(self) -> None:
         """Handle the Clear button click."""
@@ -273,5 +279,6 @@ class HistorySection:
             parent=self.frame.winfo_toplevel(),
         )
         if result:
+            log.info("User confirmed history clear")
             self.config.clear_history(keep_pinned=True)
             self.config.save()

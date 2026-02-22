@@ -95,11 +95,16 @@ class ConfigManager:
     def load(self) -> None:
         """Load configuration from file. Use defaults if the file is missing or corrupt."""
         if not self.path.exists():
+            log.debug("Config file not found, using defaults: %s", self.path)
             return
         try:
             text = self.path.read_text(encoding="utf-8")
             d = json.loads(text)
             self.data = self._from_dict(d)
+            log.debug(
+                "Config loaded: %d history, %d tab groups",
+                len(self.data.history), len(self.data.tab_groups),
+            )
         except (json.JSONDecodeError, KeyError, TypeError, ValueError) as e:
             log.warning("Config file is corrupt, using defaults: %s", e)
             self.data = AppConfig()
@@ -110,6 +115,7 @@ class ConfigManager:
         d = self._to_dict()
         text = json.dumps(d, ensure_ascii=False, indent=2)
         self.path.write_text(text, encoding="utf-8")
+        log.debug("Config saved: %s", self.path)
 
     def _to_dict(self) -> dict[str, Any]:
         """Serialize AppConfig to a dictionary."""
@@ -179,11 +185,13 @@ class ConfigManager:
         for entry in self.data.history:
             if os.path.normpath(entry.path) == normalized:
                 entry.touch()
+                log.debug("History updated (existing): %s", normalized)
                 return
         new_entry = HistoryEntry(path=normalized)
         new_entry.touch()
         self.data.history.append(new_entry)
         self._trim_history()
+        log.debug("History added (new): %s", normalized)
 
     def remove_history(self, path: str) -> None:
         """Remove a path from history."""
@@ -195,10 +203,12 @@ class ConfigManager:
 
     def clear_history(self, *, keep_pinned: bool = True) -> None:
         """Clear history. If keep_pinned is True, pinned entries are preserved."""
+        before = len(self.data.history)
         if keep_pinned:
             self.data.history = [e for e in self.data.history if e.pinned]
         else:
             self.data.history.clear()
+        log.info("History cleared: %d -> %d entries (keep_pinned=%s)", before, len(self.data.history), keep_pinned)
 
     def toggle_pin(self, path: str) -> None:
         """Toggle the pinned state of a history entry."""
@@ -206,7 +216,9 @@ class ConfigManager:
         for entry in self.data.history:
             if os.path.normpath(entry.path) == normalized:
                 entry.pinned = not entry.pinned
+                log.debug("Pin toggled: %s -> pinned=%s", normalized, entry.pinned)
                 return
+        log.debug("toggle_pin: path not found in history: %s", normalized)
 
     def get_sorted_history(self) -> list[HistoryEntry]:
         """Return history sorted with pinned first, each group by most recent."""
@@ -240,23 +252,31 @@ class ConfigManager:
     # --- Tab group operations ---
 
     def add_tab_group(self, name: str) -> TabGroup | None:
-        """Create a new empty tab group. Returns None if the name already exists."""
+        """Create a new empty tab group. Returns None if the name already exists or is empty."""
+        if not name or not name.strip():
+            log.debug("add_tab_group: empty name rejected")
+            return None
         if self.get_tab_group(name) is not None:
+            log.debug("add_tab_group: name already exists: %s", name)
             return None
         group = TabGroup(name=name)
         self.data.tab_groups.append(group)
+        log.info("Tab group added: %s", name)
         return group
 
     def delete_tab_group(self, name: str) -> None:
         """Delete a tab group by name."""
         self.data.tab_groups = [g for g in self.data.tab_groups if g.name != name]
+        log.info("Tab group deleted: %s", name)
 
     def rename_tab_group(self, old_name: str, new_name: str) -> None:
         """Rename a tab group."""
         for group in self.data.tab_groups:
             if group.name == old_name:
                 group.name = new_name
+                log.info("Tab group renamed: %s -> %s", old_name, new_name)
                 return
+        log.debug("rename_tab_group: not found: %s", old_name)
 
     def get_tab_group(self, name: str) -> TabGroup | None:
         """Get a tab group by name. Returns None if not found."""
@@ -269,13 +289,16 @@ class ConfigManager:
         """Add a path to a tab group."""
         group = self.get_tab_group(group_name)
         if group:
-            group.paths.append(os.path.normpath(path))
+            normalized = os.path.normpath(path)
+            group.paths.append(normalized)
+            log.debug("Path added to group '%s': %s", group_name, normalized)
 
     def remove_path_from_group(self, group_name: str, index: int) -> None:
         """Remove a path from a tab group by index."""
         group = self.get_tab_group(group_name)
         if group and 0 <= index < len(group.paths):
-            group.paths.pop(index)
+            removed = group.paths.pop(index)
+            log.debug("Path removed from group '%s': [%d] %s", group_name, index, removed)
 
     def move_tab_group(self, old_index: int, new_index: int) -> None:
         """Reorder a tab group."""
@@ -295,6 +318,7 @@ class ConfigManager:
         """
         source = self.get_tab_group(name)
         if not source:
+            log.debug("copy_tab_group: source not found: %s", name)
             return None
         # Extract base name: strip trailing ' <digits>'
         m = re.match(r'^(.*?)\s+(\d+)$', name)
@@ -313,6 +337,7 @@ class ConfigManager:
             window_height=source.window_height,
         )
         self.data.tab_groups.append(new_group)
+        log.info("Tab group copied: %s -> %s (%d paths)", name, new_name, len(new_group.paths))
         return new_group
 
     def move_path_in_group(self, group_name: str, old_index: int, new_index: int) -> None:

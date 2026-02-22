@@ -26,8 +26,13 @@ _ACCESSIBILITY_KEYWORDS = ("assistive", "アクセシビリティ", "辅助功�
 
 
 def _esc_applescript(p: str) -> str:
-    """Escape backslashes and double quotes for AppleScript string literals."""
-    return p.replace("\\", "\\\\").replace('"', '\\"')
+    """Escape special characters for AppleScript string literals."""
+    return (
+        p.replace("\\", "\\\\")
+        .replace('"', '\\"')
+        .replace("\n", "")
+        .replace("\r", "")
+    )
 
 
 def _build_open_window_script(

@@ -166,8 +166,8 @@ class TabGroupSection:
                     self.listbox.configure(
                         bg="#ffffff", fg="#000000", selectbackground="#1f6aa5"
                     )
-            except Exception:
-                pass
+            except Exception as e:
+                log.debug("Theme detection failed for listbox: %s", e)
 
         # Action buttons (right side)
         btn_frame = Frame(content)
@@ -267,6 +267,7 @@ class TabGroupSection:
         self.tab_view.set_current_tab(name)
         self.current_tab_name = name
         self._refresh_listbox()
+        log.info("Tab added: %s", name)
 
     def _on_delete_tab(self) -> None:
         """Handle the Delete Tab button click."""
@@ -280,6 +281,7 @@ class TabGroupSection:
             parent=top,
         )
         if result:
+            log.info("Tab deleted: %s", name)
             self.config.delete_tab_group(name)
             self.config.save()
             self.tab_view.delete_tab(name)
@@ -317,6 +319,7 @@ class TabGroupSection:
         self.config.save()
         self.tab_view.rename_tab(old_name, new_name)
         self.current_tab_name = new_name
+        log.info("Tab renamed: %s -> %s", old_name, new_name)
 
     def _on_copy_tab(self) -> None:
         """Handle the Copy Tab button click."""
@@ -332,6 +335,7 @@ class TabGroupSection:
         self.current_tab_name = new_group.name
         self._refresh_listbox()
         self._load_geometry()
+        log.info("Tab copied: %s -> %s", name, new_group.name)
 
     def _on_move_tab_left(self) -> None:
         """Move the current tab one position to the left."""
@@ -385,15 +389,18 @@ class TabGroupSection:
         self.config.save()
         self._refresh_listbox()
         self.path_entry.delete(0, tk.END)
+        log.info("Path added to '%s': %s", self.current_tab_name, expanded)
 
     def _on_remove_path(self) -> None:
         """Handle the Remove Path button click."""
         sel = self.listbox.curselection()
         if not sel or not self.current_tab_name:
             return
+        removed_path = self.listbox.get(sel[0])
         self.config.remove_path_from_group(self.current_tab_name, sel[0])
         self.config.save()
         self._refresh_listbox()
+        log.info("Path removed from '%s': %s", self.current_tab_name, removed_path)
 
     def _on_move_up(self) -> None:
         """Move the selected path up in the list."""
@@ -405,6 +412,7 @@ class TabGroupSection:
         self.config.save()
         self._refresh_listbox()
         self.listbox.selection_set(idx - 1)
+        log.debug("Path moved up: [%d] -> [%d] in '%s'", idx, idx - 1, self.current_tab_name)
 
     def _on_move_down(self) -> None:
         """Move the selected path down in the list."""
@@ -418,6 +426,7 @@ class TabGroupSection:
             self.config.save()
             self._refresh_listbox()
             self.listbox.selection_set(idx + 1)
+            log.debug("Path moved down: [%d] -> [%d] in '%s'", idx, idx + 1, self.current_tab_name)
 
     def _on_browse(self) -> None:
         """Open a folder selection dialog."""
@@ -600,5 +609,6 @@ class TabGroupSection:
             )
             return
         self._opening = True
+        log.info("Opening as tabs: tab='%s', %d paths", self.current_tab_name, len(group.paths))
         self.on_open_tabs(group.paths, self._get_window_rect())
         # _opening is reset by MainWindow._reset_tab_opening_flag when thread completes

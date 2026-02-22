@@ -298,8 +298,8 @@ class TabView:
             elif bot_frac > vis_hi:
                 target = bot_frac - (vis_hi - vis_lo)
                 self._canvas.yview_moveto(max(0.0, target))
-        except Exception:
-            pass
+        except Exception as e:
+            log.debug("scroll_to_current failed: %s", e)
 
     # ---- internal ----
 

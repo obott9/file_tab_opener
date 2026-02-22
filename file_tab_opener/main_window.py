@@ -170,6 +170,9 @@ class MainWindow:
 
         timeout = self._get_timeout()
 
+        # Show wait cursor while tabs are being opened
+        self.root.config(cursor="wait")
+
         def safe_after(callback: Any) -> None:
             """Schedule callback on main thread, ignoring TclError if window closed."""
             try:
@@ -205,9 +208,10 @@ class MainWindow:
         threading.Thread(target=do_open, daemon=True).start()
 
     def _reset_tab_opening_flag(self) -> None:
-        """Reset the tab group section's opening flag from the main thread."""
+        """Reset the tab group section's opening flag and cursor from the main thread."""
         if hasattr(self, "tab_group_section"):
             self.tab_group_section._opening = False
+        self.root.config(cursor="")
 
     def _on_close(self) -> None:
         """Save window geometry and close."""

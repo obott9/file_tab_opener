@@ -2,7 +2,7 @@
 Open folders as tabs in Windows Explorer.
 
 Three-tier fallback:
-1. pywinauto UIA (Ctrl+T -> UIA address bar input -> Enter)
+1. pywinauto UIA (UIA Invoke/ValuePattern — no global keystrokes)
 2. ctypes SendInput (Ctrl+T -> Ctrl+L -> keystroke input -> Enter)
 3. Separate windows (subprocess, not tabs)
 
@@ -36,6 +36,10 @@ VK_CONTROL = 0x11
 VK_RETURN = 0x0D
 VK_T = 0x54
 VK_L = 0x4C
+
+# --- PostMessage constants (for window-targeted key events) ---
+WM_KEYDOWN = 0x0100
+WM_KEYUP = 0x0101
 
 
 class KEYBDINPUT(ctypes.Structure):
@@ -153,6 +157,17 @@ def _bring_to_foreground(hwnd: int) -> None:
     """Bring a window to the foreground."""
     ctypes.windll.user32.ShowWindow(hwnd, 9)  # SW_RESTORE
     ctypes.windll.user32.SetForegroundWindow(hwnd)
+
+
+def _post_enter_key(hwnd: int) -> None:
+    """Send Enter key to a specific window via PostMessage.
+
+    Unlike SendInput (global), PostMessage targets a specific window,
+    so user keyboard activity cannot interfere.
+    """
+    ctypes.windll.user32.PostMessageW(hwnd, WM_KEYDOWN, VK_RETURN, 0)
+    time.sleep(0.05)
+    ctypes.windll.user32.PostMessageW(hwnd, WM_KEYUP, VK_RETURN, 0)
 
 
 def _apply_window_rect(hwnd: int, window_rect: tuple[int, int, int, int]) -> None:
@@ -311,11 +326,12 @@ def _open_tabs_pywinauto_uia(
     window_rect: tuple[int, int, int, int] | None = None,
 ) -> bool:
     """
-    Open tabs using pywinauto UIA with direct address bar text input.
+    Open tabs using pywinauto UIA — no global keystrokes.
 
-    Opens the first path via explorer.exe, connects via UIA, then
-    uses Ctrl+T for new tabs and sets the address bar text via
-    UIA ValuePattern.
+    Uses UIA InvokePattern for the "+" tab button, UIA ValuePattern
+    for the address bar, and PostMessage for Enter. Falls back to
+    keyboard shortcuts only when a UIA operation fails.
+    This prevents user keyboard/mouse activity from interfering.
     """
     from pywinauto import Application, keyboard as pwa_keyboard
 
@@ -350,7 +366,29 @@ def _open_tabs_pywinauto_uia(
     win.set_focus()
     log.debug("Connected via UIA: hwnd=%s", new_hwnd)
 
-    # Get reference to the address bar Edit control
+    # --- Discover UIA elements for keystroke-free automation ---
+
+    # "+" (Add tab) button — UIA InvokePattern, no keyboard needed
+    add_tab_btn = None
+    try:
+        add_tab_btn = win.child_window(
+            auto_id="AddButton", control_type="Button",
+        )
+        add_tab_btn.wait("exists", timeout=3)
+        log.debug("Found AddButton via UIA")
+    except Exception as e:
+        log.debug("AddButton not found (%s), will use Ctrl+T fallback", e)
+
+    # XAML island host — target for PostMessage Enter
+    xaml_hwnd = None
+    try:
+        xaml_host = win.child_window(class_name="InputSiteWindowClass")
+        xaml_hwnd = xaml_host.handle
+        log.debug("Found InputSiteWindowClass: hwnd=%s", xaml_hwnd)
+    except Exception as e:
+        log.debug("InputSiteWindowClass not found (%s), will use keyboard Enter", e)
+
+    # Address bar Edit control
     addr_edit = win.child_window(
         auto_id="PART_AutoSuggestBox",
         control_type="Group",
@@ -359,21 +397,34 @@ def _open_tabs_pywinauto_uia(
         control_type="Edit",
     )
 
-    # Open remaining paths: Ctrl+T -> UIA text input -> Enter -> wait
+    # Open remaining paths: add tab -> set path -> navigate
     for i, path in enumerate(paths[1:], start=2):
         try:
             norm_path = os.path.normpath(path)
             log.debug("Adding tab: [%d/%d] %s", i, len(paths), norm_path)
 
-            # Ctrl+T: open a new tab
-            pwa_keyboard.send_keys("^t")
+            # --- New tab (UIA Invoke → Ctrl+T fallback) ---
+            if add_tab_btn:
+                try:
+                    add_tab_btn.invoke()
+                    log.debug("New tab via UIA Invoke")
+                except Exception as e:
+                    log.debug("UIA Invoke failed (%s), Ctrl+T fallback", e)
+                    pwa_keyboard.send_keys("^t")
+            else:
+                pwa_keyboard.send_keys("^t")
             time.sleep(0.8)
 
-            # Set path with retry: Ctrl+L -> input -> verify -> Enter
+            # --- Focus address bar + set path (with retry) ---
             path_set = False
             for attempt in range(3):
-                # Ctrl+L: focus the address bar
-                pwa_keyboard.send_keys("^l")
+                # Focus (UIA set_focus → Ctrl+L fallback)
+                try:
+                    addr_edit.set_focus()
+                    log.debug("Address bar focused via UIA (attempt %d)", attempt + 1)
+                except Exception as e:
+                    log.debug("UIA set_focus failed (%s), Ctrl+L fallback", e)
+                    pwa_keyboard.send_keys("^l")
 
                 # Wait for the address bar Edit to be ready
                 try:
@@ -420,8 +471,17 @@ def _open_tabs_pywinauto_uia(
                 log.warning("Path set failed after retries, proceeding anyway: %s", norm_path)
 
             time.sleep(0.1)
-            # Press Enter to navigate
-            pwa_keyboard.send_keys("{ENTER}")
+
+            # --- Navigate: Enter (PostMessage → keyboard fallback) ---
+            if xaml_hwnd:
+                try:
+                    _post_enter_key(xaml_hwnd)
+                    log.debug("Enter via PostMessage to hwnd=%s", xaml_hwnd)
+                except Exception as e:
+                    log.debug("PostMessage failed (%s), keyboard Enter fallback", e)
+                    pwa_keyboard.send_keys("{ENTER}")
+            else:
+                pwa_keyboard.send_keys("{ENTER}")
 
             # Wait for navigation to complete
             _wait_for_navigation(addr_edit, timeout=timeout)

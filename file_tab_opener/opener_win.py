@@ -481,7 +481,11 @@ def _open_tabs_pywinauto_uia(
                 pwa_keyboard.send_keys("{ENTER}")
 
             # Wait for navigation to complete
-            _wait_for_navigation(addr_edit, timeout=timeout)
+            if not _wait_for_navigation(addr_edit, timeout=timeout):
+                log.error("Navigation timeout: %s (%.0fs)", path, timeout)
+                if on_error:
+                    on_error(path, f"Navigation timeout ({timeout:.0f}s)")
+                break
 
             if on_progress:
                 on_progress(i, len(paths), path)

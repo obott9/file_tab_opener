@@ -128,10 +128,9 @@ def _build_applescript(
 ) -> str:
     """Build an AppleScript to open folders as Finder tabs.
 
-    Uses retry loops instead of fixed delays: after ⌘T, repeatedly
-    attempts `set target` until it succeeds (max _RETRY_MAX x _RETRY_DELAY).
-    This adapts to Mac speed — fast Macs proceed immediately, slow Macs
-    wait only as long as needed.
+    After ⌘T, waits for the Finder window id to change (confirming the
+    new tab is active) before setting its target. This prevents set target
+    from silently applying to the previous tab.
     """
     lines: list[str] = []
     # First path: always create a new Finder window (not reuse existing)
@@ -143,11 +142,12 @@ def _build_applescript(
         lines.append(f"  set bounds of front Finder window to {{{x}, {y}, {x + w}, {y + h}}}")
     lines.append("end tell")
 
-    # Remaining paths: ⌘T for new tab, then retry set target until verified
+    # Remaining paths: ⌘T, wait for new tab (window id change), then set target
     for path in paths[1:]:
         escaped = _esc_applescript(path)
-        # Ensure trailing slash for POSIX path comparison
-        expected = path.rstrip("/") + "/"
+        lines.append("")
+        # Record current window id before ⌘T
+        lines.append('tell application "Finder" to set prevId to id of front Finder window')
         lines.append("")
         lines.append('tell application "System Events"')
         lines.append('  tell process "Finder"')
@@ -155,20 +155,19 @@ def _build_applescript(
         lines.append("  end tell")
         lines.append("end tell")
         lines.append("")
+        # Wait for window id to change (new tab is active)
         lines.append(f"repeat {_RETRY_MAX} times")
-        lines.append("  try")
-        lines.append('    tell application "Finder"')
-        lines.append(
-            f'      set target of front Finder window to POSIX file "{escaped}" as alias'
-        )
-        lines.append(
-            f'      if (POSIX path of (target of front Finder window as alias)) is "{expected}" then exit repeat'
-        )
-        lines.append("    end tell")
-        lines.append("  on error")
-        lines.append("  end try")
+        lines.append('  tell application "Finder" to set curId to id of front Finder window')
+        lines.append("  if curId is not prevId then exit repeat")
         lines.append(f"  delay {_RETRY_DELAY}")
         lines.append("end repeat")
+        lines.append("")
+        # Set target on the confirmed new tab
+        lines.append('tell application "Finder"')
+        lines.append(
+            f'  set target of front Finder window to POSIX file "{escaped}" as alias'
+        )
+        lines.append("end tell")
 
     return "\n".join(lines)
 

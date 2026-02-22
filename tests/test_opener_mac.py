@@ -104,11 +104,12 @@ class TestBuildAppleScript:
         assert count == 2
 
     def test_retry_loop_for_tabs(self) -> None:
-        """Each additional tab uses a retry loop instead of fixed delay."""
+        """Each additional tab waits for window id change before set target."""
         script = _build_applescript(["/a", "/b"])
         assert "repeat" in script
         assert "exit repeat" in script
-        assert "on error" in script
+        assert "set prevId to id of front Finder window" in script
+        assert "if curId is not prevId then exit repeat" in script
         # No fixed delay between keystroke and set target
         assert "delay 0.5" not in script
         assert "delay 0.3" not in script

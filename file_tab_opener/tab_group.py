@@ -13,6 +13,8 @@ import tkinter as tk
 import tkinter.ttk as ttk
 from collections.abc import Callable
 from pathlib import Path
+
+from file_tab_opener import is_unc_path
 from tkinter import filedialog, messagebox, simpledialog
 from typing import Any
 
@@ -378,7 +380,7 @@ class TabGroupSection:
             )
             return
         expanded = os.path.expanduser(path)
-        if not Path(expanded).is_dir():
+        if not (is_unc_path(expanded) or Path(expanded).is_dir()):
             messagebox.showwarning(
                 t("path.invalid_title"),
                 t("path.invalid_msg", path=path),

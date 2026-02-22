@@ -46,7 +46,9 @@ dev = ["pytest>=7.0"]
 file-tab-opener = "file_tab_opener.__main__:main"
 
 [project.urls]
+Homepage = "https://github.com/obott9/file_tab_opener"
 Repository = "https://github.com/obott9/file_tab_opener"
+Issues = "https://github.com/obott9/file_tab_opener/issues"
 
 [tool.hatch.build.targets.wheel]
 packages = ["file_tab_opener"]

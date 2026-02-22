@@ -170,8 +170,13 @@ The output is in `dist/File Tab Opener/`. On macOS, a `.app` bundle is created; 
 file_tab_opener/
 ├── pyproject.toml           # Package configuration
 ├── LICENSE                  # MIT License
+├── CHANGELOG.md             # Version history
+├── requirements.txt         # Dependency list (deprecated; use pyproject.toml)
 ├── README.md                # This file
 ├── README_ja.md             # Japanese README
+├── README_ko.md             # Korean README
+├── README_zh_TW.md          # Traditional Chinese README
+├── README_zh_CN.md          # Simplified Chinese README
 ├── file_tab_opener/         # Source package
 │   ├── __init__.py
 │   ├── __main__.py          # Entry point

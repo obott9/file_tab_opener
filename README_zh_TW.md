@@ -158,8 +158,13 @@ pyinstaller --noconfirm --onedir --windowed \
 file_tab_opener/
 ├── pyproject.toml           # 套件設定
 ├── LICENSE                  # MIT 授權
+├── CHANGELOG.md             # 版本紀錄
+├── requirements.txt         # 相依性清單（已棄用；請使用 pyproject.toml）
 ├── README.md                # 英文 README
+├── README_ja.md             # 日文 README
+├── README_ko.md             # 韓文 README
 ├── README_zh_TW.md          # 本檔案
+├── README_zh_CN.md          # 简体中文 README
 ├── file_tab_opener/         # 原始碼套件
 │   ├── __init__.py
 │   ├── __main__.py          # 進入點

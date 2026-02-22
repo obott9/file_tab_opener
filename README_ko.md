@@ -158,8 +158,13 @@ pyinstaller --noconfirm --onedir --windowed \
 file_tab_opener/
 ├── pyproject.toml           # 패키지 설정
 ├── LICENSE                  # MIT 라이선스
+├── CHANGELOG.md             # 버전 기록
+├── requirements.txt         # 의존성 목록 (비권장; pyproject.toml 사용)
 ├── README.md                # 영어 README
+├── README_ja.md             # 일본어 README
 ├── README_ko.md             # 이 파일
+├── README_zh_TW.md          # 繁體中文 README
+├── README_zh_CN.md          # 简体中文 README
 ├── file_tab_opener/         # 소스 패키지
 │   ├── __init__.py
 │   ├── __main__.py          # 진입점

@@ -1,4 +1,8 @@
 # -*- mode: python ; coding: utf-8 -*-
+# NOTE: Icon files in assets/ are git-ignored. To build, prepare:
+#   - assets/FileTabOpener.ico   (Windows)
+#   - assets/FileTabOpener.icns  (macOS)
+# See dev notes for icon creation instructions.
 from PyInstaller.utils.hooks import collect_all
 
 datas = []

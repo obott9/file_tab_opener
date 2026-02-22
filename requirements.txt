@@ -4,6 +4,6 @@
 #   pip install .[all]     (all optional dependencies)
 #   pip install -e .[all]  (development, editable install)
 
-setuptools
+setuptools>=75.0
 customtkinter>=5.2.0
 pywinauto>=0.6.8;sys_platform=="win32"

@@ -13,6 +13,8 @@ import tkinter.ttk as ttk
 from collections.abc import Callable
 from pathlib import Path
 from tkinter import messagebox
+
+from file_tab_opener import is_unc_path
 from typing import Any
 
 from file_tab_opener.config import ConfigManager
@@ -238,7 +240,7 @@ class HistorySection:
         if not path:
             return
         expanded = os.path.expanduser(path)
-        if Path(expanded).is_dir():
+        if is_unc_path(expanded) or Path(expanded).is_dir():
             log.info("Opening folder from history: %s", expanded)
             self.config.add_history(expanded)
             self.config.save()

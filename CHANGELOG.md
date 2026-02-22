@@ -19,6 +19,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/).
 
 ### Fixed
 - `widgets.scroll_to_current()`: bare `except Exception: pass` replaced with `log.debug`
+- UNC path validation in GUI (`history.py`, `tab_group.py`) now skips `is_dir()` for `\\server\share` paths (consistent with `validate_paths`)
 
 ## [1.1.0] - 2026-02-22
 
@@ -89,3 +90,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/).
 ### Technical
 - Installable Python package with pyproject.toml (Hatchling build system)
 - 68 tests (40 config + 28 i18n)
+
+[1.1.1]: https://github.com/obott9/file_tab_opener/compare/v1.1.0...v1.1.1
+[1.1.0]: https://github.com/obott9/file_tab_opener/compare/v1.0.0...v1.1.0
+[1.0.0]: https://github.com/obott9/file_tab_opener/releases/tag/v1.0.0

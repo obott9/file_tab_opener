@@ -4,7 +4,7 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/).
 
-## [Unreleased]
+## [1.1.2] - 2026-02-23
 
 ### Changed
 - `TabGroupSection.reset_opening()` public method replaces direct `_opening` attribute access from `MainWindow` (P1: encapsulation)
@@ -108,6 +108,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/).
 - Installable Python package with pyproject.toml (Hatchling build system)
 - 68 tests (40 config + 28 i18n)
 
+[1.1.2]: https://github.com/obott9/file_tab_opener/compare/v1.1.1...v1.1.2
 [1.1.1]: https://github.com/obott9/file_tab_opener/compare/v1.1.0...v1.1.1
 [1.1.0]: https://github.com/obott9/file_tab_opener/compare/v1.0.0...v1.1.0
 [1.0.0]: https://github.com/obott9/file_tab_opener/releases/tag/v1.0.0

@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "file-tab-opener"
-version = "1.1.1"
+version = "1.1.2"
 description = "Open multiple folders as tabs in Windows Explorer or macOS Finder"
 readme = "README.md"
 license = "MIT"

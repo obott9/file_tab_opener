@@ -290,7 +290,7 @@ class MainWindow:
         """Reset the tab group section's opening flag and cursor from the main thread."""
         self._hide_toast()
         if hasattr(self, "tab_group_section"):
-            self.tab_group_section._opening = False
+            self.tab_group_section.reset_opening()
         self._set_cursor("")
 
     def _on_close(self) -> None:

@@ -4,6 +4,23 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [Unreleased]
+
+### Changed
+- `TabGroupSection.reset_opening()` public method replaces direct `_opening` attribute access from `MainWindow` (P1: encapsulation)
+- `open_single_folder` and `_open_separate` in `opener_mac.py` now use `subprocess.run` instead of fire-and-forget `Popen` (P2: resource cleanup)
+- Dropdown height in `history.py` now measured via `winfo_reqheight()` instead of hardcoded `20px` per row (P3: HiDPI support)
+- `TabView._estimate_btn_width()` now measures CTkButton width by creating a temporary button, matching ttk behavior (P4: accurate CJK width)
+- Settings default values extracted to `DEFAULT_SETTINGS` constant in `config.py` (P5: maintainability)
+- `_STRINGS` dictionary keys in `i18n.py` now use `LANG_*` constants instead of string literals (P7: typo prevention)
+
+### Fixed
+- Dropdown `FocusOut` handler now uses `_dropdown_close_pending` flag to prevent double-close race condition (P6)
+
+### Tests
+- Added 20 new tests: `_esc_applescript` (5), `open_single_folder` (4), `open_folders_as_tabs` (6), `DEFAULT_SETTINGS` (2), `strip_quotes` edge cases (3)
+- Test count: 139 passed (was 119)
+
 ## [1.1.1] - 2026-02-23
 
 ### Added

@@ -31,6 +31,7 @@ def strip_quotes(text: str) -> str:
     return text
 
 HISTORY_MAX: Final[int] = 50
+DEFAULT_SETTINGS: Final[dict[str, Any]] = {"use_custom_tk": True}
 
 
 def get_config_path() -> Path:
@@ -82,7 +83,7 @@ class AppConfig:
     history: list[HistoryEntry] = field(default_factory=list)
     tab_groups: list[TabGroup] = field(default_factory=list)
     window_geometry: str = "800x600"
-    settings: dict[str, Any] = field(default_factory=lambda: {"use_custom_tk": True})
+    settings: dict[str, Any] = field(default_factory=lambda: dict(DEFAULT_SETTINGS))
 
 
 class ConfigManager:
@@ -173,7 +174,7 @@ class ConfigManager:
             history=history,
             tab_groups=tab_groups,
             window_geometry=d.get("window_geometry", "800x600"),
-            settings={**{"use_custom_tk": True}, **d.get("settings", {})},
+            settings={**DEFAULT_SETTINGS, **d.get("settings", {})},
         )
 
     # --- History operations ---

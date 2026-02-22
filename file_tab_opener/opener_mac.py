@@ -71,11 +71,13 @@ def open_single_folder(
     try:
         expanded = os.path.expanduser(path)
         script = _build_open_window_script(expanded, window_rect)
-        # Fire-and-forget: Popen is intentional here. We don't need to wait
-        # for the Finder window to appear before returning to the caller.
-        subprocess.Popen(["osascript", "-e", script], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        subprocess.run(
+            ["osascript", "-e", script],
+            stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
+            timeout=timeout,
+        )
         return True
-    except OSError:
+    except (OSError, subprocess.TimeoutExpired):
         return False
 
 
@@ -204,7 +206,11 @@ def _open_separate(
     for i, path in enumerate(paths, start=1):
         try:
             script = _build_open_window_script(path, window_rect)
-            subprocess.Popen(["osascript", "-e", script], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+            subprocess.run(
+                ["osascript", "-e", script],
+                stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
+                timeout=_APPLESCRIPT_TIMEOUT,
+            )
             log.debug("Opened separately: [%d/%d] %s", i, len(paths), path)
             if on_progress:
                 on_progress(i, len(paths), path)

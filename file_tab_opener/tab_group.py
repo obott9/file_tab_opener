@@ -613,4 +613,7 @@ class TabGroupSection:
         self._opening = True
         log.info("Opening as tabs: tab='%s', %d paths", self.current_tab_name, len(group.paths))
         self.on_open_tabs(group.paths, self._get_window_rect())
-        # _opening is reset by MainWindow._reset_tab_opening_flag when thread completes
+
+    def reset_opening(self) -> None:
+        """Reset the opening flag. Called by MainWindow when the worker thread completes."""
+        self._opening = False

@@ -214,3 +214,57 @@ class TestSettingsDefaultMerge:
         cm.load()
         assert cm.data.settings["use_custom_tk"] is False
         assert cm.data.settings["timeout"] == 10
+
+
+# ============================================================
+# DEFAULT_SETTINGS constant (P5)
+# ============================================================
+
+
+class TestDefaultSettings:
+    """Test that DEFAULT_SETTINGS is used consistently."""
+
+    def test_default_settings_constant_matches_appconfig(self) -> None:
+        """AppConfig default settings should match DEFAULT_SETTINGS."""
+        from file_tab_opener.config import AppConfig, DEFAULT_SETTINGS
+        config = AppConfig()
+        for key, value in DEFAULT_SETTINGS.items():
+            assert config.settings[key] == value
+
+    def test_from_dict_uses_default_settings(self, tmp_path) -> None:
+        """_from_dict should merge DEFAULT_SETTINGS with saved settings."""
+        import json
+        from file_tab_opener.config import ConfigManager, DEFAULT_SETTINGS
+        cm = ConfigManager()
+        cm.path = tmp_path / "config.json"
+        cm.path.parent.mkdir(parents=True, exist_ok=True)
+        # Save with extra setting, omitting defaults
+        data = {"history": [], "tab_groups": [], "settings": {"timeout": 15}}
+        cm.path.write_text(json.dumps(data), encoding="utf-8")
+        cm.load()
+        # Default settings should be merged in
+        for key, value in DEFAULT_SETTINGS.items():
+            assert cm.data.settings[key] == value
+        # User setting should also be preserved
+        assert cm.data.settings["timeout"] == 15
+
+
+# ============================================================
+# _strip_quotes edge cases
+# ============================================================
+
+
+class TestStripQuotesEdgeCases:
+    """Additional edge case tests for strip_quotes."""
+
+    def test_triple_quotes(self) -> None:
+        """Triple quotes should strip outer pair only."""
+        assert strip_quotes('"""') == '"'
+
+    def test_whitespace_only(self) -> None:
+        """Whitespace-only string should be returned as-is."""
+        assert strip_quotes("   ") == "   "
+
+    def test_unicode_path_with_quotes(self) -> None:
+        """Unicode paths with surrounding quotes should be stripped."""
+        assert strip_quotes('"C:\\ユーザー\\テスト"') == "C:\\ユーザー\\テスト"

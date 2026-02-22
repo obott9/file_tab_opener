@@ -84,6 +84,7 @@ class HistorySection:
 
         self._dropdown_win: tk.Toplevel | None = None
         self._dropdown_listbox: tk.Listbox | None = None
+        self._dropdown_close_pending: bool = False
 
         open_key = "history.open_finder" if IS_MAC else "history.open_explorer"
         Button(self.frame, text=t(open_key), command=self._on_open).pack(
@@ -170,15 +171,22 @@ class HistorySection:
 
         self._dropdown_listbox.bind("<<ListboxSelect>>", self._on_dropdown_select)
 
-        # Size and position (extra space for padding + scrollbars)
-        self._dropdown_win.geometry(f"{width + 16}x{row_count * 20 + 28}+{x}+{y}")
+        # Size and position: measure actual listbox height for HiDPI support
         self._dropdown_win.update_idletasks()
+        list_h = self._dropdown_listbox.winfo_reqheight()
+        # Account for padding (8+8 horizontal, 6+6 vertical) and scrollbar
+        pad_x, pad_y = 16, 12
+        scrollbar_h = scrollbar_x.winfo_reqheight()
+        total_h = list_h + scrollbar_h + pad_y
+        self._dropdown_win.geometry(f"{width + pad_x}x{total_h}+{x}+{y}")
 
         # Close on click outside -- check listbox selection state before closing
         self._dropdown_win.bind("<FocusOut>", self._on_dropdown_focus_out)
 
     def _on_dropdown_focus_out(self, _event: Any) -> None:
         """Handle FocusOut on dropdown -- delay close to avoid racing with selection."""
+        if self._dropdown_close_pending:
+            return
         try:
             if (self._dropdown_listbox
                     and self._dropdown_listbox.winfo_exists()
@@ -187,10 +195,12 @@ class HistorySection:
                 return
         except tk.TclError:
             pass
+        self._dropdown_close_pending = True
         self.frame.after(100, self._close_dropdown)
 
     def _close_dropdown(self) -> None:
         """Close the custom dropdown."""
+        self._dropdown_close_pending = False
         if self._dropdown_win and self._dropdown_win.winfo_exists():
             self._dropdown_win.destroy()
             log.debug("Dropdown closed")

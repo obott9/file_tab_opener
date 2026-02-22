@@ -326,12 +326,18 @@ class TabView:
         self._frame.after_idle(self._relayout)
 
     def _estimate_btn_width(self, name: str) -> int:
-        """Estimate the pixel width a button would need for the given text."""
+        """Measure the pixel width a button needs for the given text.
+
+        Creates a temporary button, measures its requested width, then
+        destroys it. Works with both CTkButton and ttk.Button.
+        """
         if CTK_AVAILABLE:
-            # width=0 makes CTkButton fit text; use display width for CJK
-            return max(_text_display_width(name) * 9 + 24, 50)
+            tmp = ctk.CTkButton(self._inner, text=name, width=0)
+            tmp.update_idletasks()
+            w = tmp.winfo_reqwidth()
+            tmp.destroy()
+            return max(w, 50)
         else:
-            # Create a temporary button, measure, destroy
             tmp = ttk.Button(self._inner, text=name)
             tmp.update_idletasks()
             w = tmp.winfo_reqwidth()

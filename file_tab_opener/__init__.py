@@ -13,13 +13,23 @@ except Exception:
     __version__ = "1.1.0"
 
 
+def _is_unc_path(p: str) -> bool:
+    """Check if a path is a UNC network path (\\\\server\\share)."""
+    normalized = p.replace("/", "\\")
+    return normalized.startswith("\\\\")
+
+
 def validate_paths(paths: list[str]) -> tuple[list[str], list[str]]:
-    """Validate paths. Returns (valid_paths, invalid_paths)."""
+    """Validate paths. Returns (valid_paths, invalid_paths).
+
+    UNC paths (\\\\server\\share) skip the is_dir() check because
+    they may require authentication that only Explorer can trigger.
+    """
     valid: list[str] = []
     invalid: list[str] = []
     for p in paths:
         expanded = os.path.expanduser(p)
-        if Path(expanded).is_dir():
+        if _is_unc_path(expanded) or Path(expanded).is_dir():
             valid.append(expanded)
         else:
             invalid.append(p)

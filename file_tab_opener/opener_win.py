@@ -177,6 +177,25 @@ def _apply_window_rect(hwnd: int, window_rect: tuple[int, int, int, int]) -> Non
     log.debug("Applied window rect: hwnd=%s, x=%d, y=%d, w=%d, h=%d", hwnd, x, y, w, h)
 
 
+def _get_window_rect(hwnd: int) -> tuple[int, int, int, int]:
+    """Get current window position and size as (x, y, width, height)."""
+    rect = wintypes.RECT()
+    ctypes.windll.user32.GetWindowRect(hwnd, ctypes.byref(rect))
+    return (rect.left, rect.top, rect.right - rect.left, rect.bottom - rect.top)
+
+
+def _move_offscreen(hwnd: int) -> tuple[int, int, int, int]:
+    """Move window off-screen, return the original (x, y, w, h).
+
+    The window remains "visible" to the OS so UIA operations work,
+    but the user cannot see it.
+    """
+    saved = _get_window_rect(hwnd)
+    ctypes.windll.user32.MoveWindow(hwnd, -32000, -32000, saved[2], saved[3], True)
+    log.debug("Moved off-screen: hwnd=%s, saved rect=%s", hwnd, saved)
+    return saved
+
+
 def _is_explorer_hwnd(hwnd: int) -> bool:
     """Check if a window handle belongs to an Explorer window (CabinetWClass)."""
     buf = ctypes.create_unicode_buffer(256)
@@ -366,6 +385,9 @@ def _open_tabs_pywinauto_uia(
     win.set_focus()
     log.debug("Connected via UIA: hwnd=%s", new_hwnd)
 
+    # Move window off-screen during tab operations (invisible to user)
+    saved_rect = _move_offscreen(new_hwnd)
+
     # --- Discover UIA elements for keystroke-free automation ---
 
     # "+" (Add tab) button — UIA InvokePattern, no keyboard needed
@@ -494,8 +516,9 @@ def _open_tabs_pywinauto_uia(
             if on_error:
                 on_error(path, str(e))
 
-    if window_rect:
-        _apply_window_rect(new_hwnd, window_rect)
+    # Move window to final position and bring to foreground
+    _apply_window_rect(new_hwnd, window_rect or saved_rect)
+    _bring_to_foreground(new_hwnd)
 
     return True
 

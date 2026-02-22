@@ -35,6 +35,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/).
 - Test count: 119 passed, 1 skipped (was 68)
 
 ### Fixed
+- Duplicate paths now deduplicated before opening tabs (prevented tab target corruption)
 - `TclError` crash when window closed during tab-opening thread (`root.after` in worker)
 - History dropdown selection now strips display prefix (📌/spaces) before inserting into entry
 - Placeholder detection uses flag instead of fragile string comparison

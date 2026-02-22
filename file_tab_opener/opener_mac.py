@@ -92,7 +92,7 @@ def open_folders_as_tabs(
     for i, p in enumerate(paths):
         log.debug("  [%d] %s", i, p)
 
-    expanded = [os.path.expanduser(p) for p in paths]
+    expanded = list(dict.fromkeys(os.path.expanduser(p) for p in paths))
 
     script = _build_applescript(expanded, window_rect=window_rect)
     log.debug("Running AppleScript (%d lines)", script.count("\n") + 1)

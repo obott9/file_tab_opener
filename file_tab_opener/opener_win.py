@@ -268,6 +268,8 @@ def open_folders_as_tabs(
     if not paths:
         return False
 
+    paths = list(dict.fromkeys(paths))
+
     log.info("Opening as tabs: %d paths, timeout=%.0fs", len(paths), timeout)
     for i, p in enumerate(paths):
         log.debug("  [%d] %s", i, p)

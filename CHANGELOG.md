@@ -36,6 +36,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/).
 
 ### Fixed
 - Duplicate paths now deduplicated before opening tabs (prevented tab target corruption)
+- AppleScript `set target` now verifies actual tab target matches expected path before proceeding (fixes first tab showing home directory)
 - `TclError` crash when window closed during tab-opening thread (`root.after` in worker)
 - History dropdown selection now strips display prefix (📌/spaces) before inserting into entry
 - Placeholder detection uses flag instead of fragile string comparison

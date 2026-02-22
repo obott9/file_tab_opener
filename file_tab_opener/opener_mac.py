@@ -143,9 +143,11 @@ def _build_applescript(
         lines.append(f"  set bounds of front Finder window to {{{x}, {y}, {x + w}, {y + h}}}")
     lines.append("end tell")
 
-    # Remaining paths: ⌘T for new tab, then retry set target until ready
+    # Remaining paths: ⌘T for new tab, then retry set target until verified
     for path in paths[1:]:
         escaped = _esc_applescript(path)
+        # Ensure trailing slash for POSIX path comparison
+        expected = path.rstrip("/") + "/"
         lines.append("")
         lines.append('tell application "System Events"')
         lines.append('  tell process "Finder"')
@@ -159,11 +161,13 @@ def _build_applescript(
         lines.append(
             f'      set target of front Finder window to POSIX file "{escaped}" as alias'
         )
+        lines.append(
+            f'      if (POSIX path of (target of front Finder window as alias)) is "{expected}" then exit repeat'
+        )
         lines.append("    end tell")
-        lines.append("    exit repeat")
         lines.append("  on error")
-        lines.append(f"    delay {_RETRY_DELAY}")
         lines.append("  end try")
+        lines.append(f"  delay {_RETRY_DELAY}")
         lines.append("end repeat")
 
     return "\n".join(lines)

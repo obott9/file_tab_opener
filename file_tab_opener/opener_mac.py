@@ -55,6 +55,7 @@ from file_tab_opener import validate_paths as validate_paths  # noqa: F401
 def open_single_folder(
     path: str,
     window_rect: tuple[int, int, int, int] | None = None,
+    timeout: float = 30.0,
 ) -> bool:
     """Open a single folder in a new Finder window.
 

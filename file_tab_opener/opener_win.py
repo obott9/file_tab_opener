@@ -285,13 +285,14 @@ from file_tab_opener import validate_paths as validate_paths  # noqa: F401
 def open_single_folder(
     path: str,
     window_rect: tuple[int, int, int, int] | None = None,
+    timeout: float = 30.0,
 ) -> bool:
     """Open a single folder in a new Explorer window."""
     try:
         before_hwnds = _enum_explorer_hwnds() if window_rect else []
         subprocess.Popen(["explorer.exe", os.path.normpath(path)])
         if window_rect:
-            hwnd = _find_new_explorer_hwnd(before_hwnds, timeout=5.0)
+            hwnd = _find_new_explorer_hwnd(before_hwnds, timeout=timeout)
             if hwnd:
                 _apply_window_rect(hwnd, window_rect)
         return True
@@ -337,7 +338,7 @@ def open_folders_as_tabs(
 
     # Final fallback: separate windows (not tabs)
     log.info("Opening as separate windows (fallback)")
-    return _open_tabs_separate(paths, on_progress, on_error, window_rect=window_rect)
+    return _open_tabs_separate(paths, on_progress, on_error, timeout=timeout, window_rect=window_rect)
 
 
 def _check_pywinauto() -> bool:
@@ -609,6 +610,7 @@ def _open_tabs_separate(
     paths: list[str],
     on_progress: Callable[[int, int, str], None] | None = None,
     on_error: Callable[[str, str], None] | None = None,
+    timeout: float = 30.0,
     window_rect: tuple[int, int, int, int] | None = None,
 ) -> bool:
     """Fallback: open each folder in a separate window."""
@@ -617,7 +619,7 @@ def _open_tabs_separate(
             before_hwnds = _enum_explorer_hwnds() if window_rect else []
             subprocess.Popen(["explorer.exe", os.path.normpath(path)])
             if window_rect:
-                hwnd = _find_new_explorer_hwnd(before_hwnds, timeout=5.0)
+                hwnd = _find_new_explorer_hwnd(before_hwnds, timeout=timeout)
                 if hwnd:
                     _apply_window_rect(hwnd, window_rect)
             if on_progress:

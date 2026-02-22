@@ -4,6 +4,22 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [1.1.1] - 2026-02-23
+
+### Added
+- Toast notification overlay during tab opening ("Opening tabs... Please wait.")
+- Toast follows OS dark/light theme via `customtkinter.get_appearance_mode()`
+- Windows `.ico` icon for PyInstaller builds (generated from source PNG with flood-fill transparency)
+- Comprehensive logging across config.py, main_window.py, history.py, tab_group.py, widgets.py
+
+### Changed
+- Icon files (`.ico`, `.icns`) moved to `assets/` (git-ignored); spec file paths updated
+- AppleScript escape hardening: newline characters (`\n`, `\r`) now stripped in `opener_mac.py`
+- Empty/whitespace-only tab group names are now rejected in `config.add_tab_group()`
+
+### Fixed
+- `widgets.scroll_to_current()`: bare `except Exception: pass` replaced with `log.debug`
+
 ## [1.1.0] - 2026-02-22
 
 ### Added
@@ -32,7 +48,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/).
 - `widgets.py` now defines `__all__` to control wildcard exports
 - `TabGroupSection.restore_tab_state()` public API (replaces private method calls from MainWindow)
 - Backward-compat re-exports in `gui.py` cleaned up
-- Test count: 119 passed, 1 skipped (was 68)
+- Test count: 127 passed (was 68)
 
 ### Fixed
 - Duplicate paths now deduplicated before opening tabs (prevented tab target corruption)

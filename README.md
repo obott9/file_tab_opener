@@ -91,6 +91,8 @@ Two-tier fallback:
 
 Windows Explorer does not provide a public API for tab operations. All methods rely on UI Automation or keystroke simulation (`Ctrl+T` → address bar input), which requires `delay` waits between each tab for the UI to respond. We have minimized delays as much as possible — using UIA ValuePattern for direct address bar input, fine-tuning wait times, and skipping unnecessary steps — but the fundamental limitation of having no native tab API means that opening many tabs will be noticeably slower than on macOS, where Finder supports direct tab manipulation via AppleScript.
 
+> **⚠️ Important:** Do not use the keyboard or mouse while tabs are being opened. The tab opening process uses OS-level keystroke simulation, so any input during the operation may interfere with the automation and cause unexpected behavior (e.g., wrong folders opening, unrelated windows appearing).
+
 ## Configuration
 
 Settings are stored in a JSON file:

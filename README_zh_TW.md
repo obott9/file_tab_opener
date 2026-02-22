@@ -74,7 +74,7 @@ python -m file_tab_opener
 
 三層回退機制以最大化相容性：
 
-1. **pywinauto UIA** — 開啟新的檔案總管視窗，透過 UI Automation 連線。使用 Ctrl+T 建立新分頁，並透過 UIA ValuePattern 直接設定網址列路徑。輸入後驗證路徑，失敗時自動重試。最可靠的方式。
+1. **pywinauto UIA** — 開啟新的檔案總管視窗，透過 UI Automation 連線。使用 UIA InvokePattern（「+」按鈕）建立新分頁，並透過 UIA ValuePattern 直接設定網址列路徑。Enter 使用 PostMessage（視窗指定，非全域）傳送。僅在 UIA 操作失敗時才回退至鍵盤快捷鍵。輸入後驗證路徑，失敗時自動重試。最可靠的方式。
 2. **ctypes SendInput** — 使用 Win32 `SendInput` API 的相同按鍵方式。無外部依賴，但因焦點和時序問題可靠性稍低。
 3. **個別視窗** — 透過 `subprocess` 在個別檔案總管視窗中開啟各資料夾的回退方案。
 
@@ -91,7 +91,7 @@ python -m file_tab_opener
 
 Windows 檔案總管沒有分頁操作的公開 API。所有方式都依賴 UI 自動化或按鍵模擬（`Ctrl+T` → 網址列輸入），每個分頁都需要等待 UI 回應的 `delay`。我們已透過 UIA ValuePattern 直接輸入網址列、最小化等待時間、省略不必要的步驟等方式盡可能優化，但由於不存在原生分頁 API，這是目前的根本限制。分頁數量多時，相比 macOS（Finder 支援透過 AppleScript 直接操作分頁）會明顯較慢。
 
-> **⚠️ 注意：** 分頁開啟過程中請勿操作鍵盤或滑鼠。分頁開啟使用 OS 層級的按鍵模擬，操作期間的任何輸入可能干擾自動化流程，導致非預期行為（例如開啟錯誤的資料夾、出現無關的視窗等）。
+> **⚠️ 注意（ctypes SendInput 回退）：** 分頁開啟過程中請勿操作鍵盤或滑鼠。ctypes 回退方式使用 OS 層級的按鍵模擬（`SendInput`），操作期間的任何輸入可能干擾自動化流程。pywinauto UIA 方式主要使用目標指定的 UI Automation 和 PostMessage（無全域按鍵），但在 UIA 操作失敗時可能回退至鍵盤快捷鍵。
 
 ## 設定檔
 

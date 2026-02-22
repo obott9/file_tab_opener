@@ -74,7 +74,7 @@ python -m file_tab_opener
 
 Three-tier fallback for maximum compatibility:
 
-1. **pywinauto UIA** — Opens a new Explorer window, connects via UI Automation, sends Ctrl+T for new tabs, and sets the address bar text via UIA ValuePattern. Includes retry with verification to ensure correct navigation. Most reliable method.
+1. **pywinauto UIA** — Opens a new Explorer window, connects via UI Automation, creates new tabs via UIA InvokePattern (the "+" button), and sets the address bar text via UIA ValuePattern. Uses PostMessage for Enter (window-targeted, not global). Falls back to keyboard shortcuts only when a UIA operation fails. Includes retry with verification to ensure correct navigation. Most reliable method.
 2. **ctypes SendInput** — Same keystroke approach using raw Win32 `SendInput` API. No external dependencies, but less reliable due to focus and timing issues.
 3. **Separate windows** — Falls back to opening each folder in its own Explorer window via `subprocess`.
 
@@ -91,7 +91,7 @@ Two-tier fallback:
 
 Windows Explorer does not provide a public API for tab operations. All methods rely on UI Automation or keystroke simulation (`Ctrl+T` → address bar input), which requires `delay` waits between each tab for the UI to respond. We have minimized delays as much as possible — using UIA ValuePattern for direct address bar input, fine-tuning wait times, and skipping unnecessary steps — but the fundamental limitation of having no native tab API means that opening many tabs will be noticeably slower than on macOS, where Finder supports direct tab manipulation via AppleScript.
 
-> **⚠️ Important (ctypes SendInput fallback):** Do not use the keyboard or mouse while tabs are being opened. The ctypes fallback method uses OS-level keystroke simulation (`SendInput`), so any input during the operation may interfere with the automation. The pywinauto UIA method uses targeted UI Automation (no global keystrokes) and is not affected by user input.
+> **⚠️ Important (ctypes SendInput fallback):** Do not use the keyboard or mouse while tabs are being opened. The ctypes fallback method uses OS-level keystroke simulation (`SendInput`), so any input during the operation may interfere with the automation. The pywinauto UIA method primarily uses targeted UI Automation and PostMessage (no global keystrokes), but may fall back to keyboard shortcuts when a UIA operation fails.
 
 ### Network Paths (Windows)
 

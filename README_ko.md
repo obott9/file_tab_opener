@@ -74,7 +74,7 @@ python -m file_tab_opener
 
 호환성을 극대화하는 3단계 폴백:
 
-1. **pywinauto UIA** — 새 탐색기 창을 열고 UI Automation으로 연결. Ctrl+T로 새 탭을 만들고 UIA ValuePattern으로 주소 표시줄에 경로를 직접 설정. 입력 후 경로를 검증하고 실패 시 자동 재시도. 가장 신뢰성 높은 방식.
+1. **pywinauto UIA** — 새 탐색기 창을 열고 UI Automation으로 연결. UIA InvokePattern("+" 버튼)으로 새 탭을 만들고 UIA ValuePattern으로 주소 표시줄에 경로를 직접 설정. Enter 전송에는 PostMessage(창 지정, 글로벌 아님)를 사용. UIA 작업 실패 시에만 키보드 단축키로 폴백. 입력 후 경로를 검증하고 실패 시 자동 재시도. 가장 신뢰성 높은 방식.
 2. **ctypes SendInput** — Win32 `SendInput` API를 사용한 동일한 키 입력 방식. 외부 의존성 없음. 포커스 및 타이밍 문제로 신뢰성이 다소 낮음.
 3. **개별 창** — `subprocess`로 각 폴더를 개별 탐색기 창으로 여는 폴백.
 
@@ -91,7 +91,7 @@ python -m file_tab_opener
 
 Windows 탐색기에는 탭 조작용 공개 API가 없습니다. 모든 방식이 UI 자동화 또는 키 입력 전송(`Ctrl+T` → 주소 표시줄 입력)에 의존하며, 탭마다 UI 응답을 기다리는 `delay`가 필요합니다. UIA ValuePattern을 통한 주소 표시줄 직접 입력, 대기 시간 최소화, 불필요한 단계 생략 등 가능한 한 고속화를 적용했지만, 네이티브 탭 API가 존재하지 않는 이상 이것이 현재의 한계입니다. 탭 수가 많을 경우, macOS(Finder는 AppleScript로 직접 탭 조작 가능)에 비해 확연히 느려집니다.
 
-> **⚠️ 주의:** 탭을 여는 동안 키보드나 마우스를 조작하지 마세요. 탭 열기 과정에서 OS 수준의 키 입력 전송을 사용하므로, 작업 중 입력이 자동화 처리를 방해하여 예기치 않은 동작(잘못된 폴더 열림, 관련 없는 창 표시 등)이 발생할 수 있습니다.
+> **⚠️ 주의(ctypes SendInput 폴백):** 탭을 여는 동안 키보드나 마우스를 조작하지 마세요. ctypes 폴백 방식은 OS 수준의 키 입력 전송(`SendInput`)을 사용하므로, 작업 중 입력이 자동화 처리를 방해할 수 있습니다. pywinauto UIA 방식은 주로 대상 지정 UI Automation과 PostMessage(글로벌 키 입력 없음)를 사용하지만, UIA 작업 실패 시 키보드 단축키로 폴백할 수 있습니다.
 
 ## 설정 파일
 

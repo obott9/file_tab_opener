@@ -74,7 +74,7 @@ python -m file_tab_opener
 
 三层回退机制以最大化兼容性：
 
-1. **pywinauto UIA** — 打开新的资源管理器窗口，通过 UI Automation 连接。使用 Ctrl+T 创建新标签页，并通过 UIA ValuePattern 直接设置地址栏路径。输入后验证路径，失败时自动重试。最可靠的方式。
+1. **pywinauto UIA** — 打开新的资源管理器窗口，通过 UI Automation 连接。使用 UIA InvokePattern（"+"按钮）创建新标签页，并通过 UIA ValuePattern 直接设置地址栏路径。Enter 使用 PostMessage（窗口指定，非全局）发送。仅在 UIA 操作失败时才回退到键盘快捷键。输入后验证路径，失败时自动重试。最可靠的方式。
 2. **ctypes SendInput** — 使用 Win32 `SendInput` API 的相同按键方式。无外部依赖，但因焦点和时序问题可靠性稍低。
 3. **单独窗口** — 通过 `subprocess` 在单独的资源管理器窗口中打开各文件夹的回退方案。
 
@@ -91,7 +91,7 @@ python -m file_tab_opener
 
 Windows 资源管理器没有标签页操作的公开 API。所有方式都依赖 UI 自动化或按键模拟（`Ctrl+T` → 地址栏输入），每个标签页都需要等待 UI 响应的 `delay`。我们已通过 UIA ValuePattern 直接输入地址栏、最小化等待时间、省略不必要的步骤等方式尽可能优化，但由于不存在原生标签页 API，这是目前的根本限制。标签页数量多时，相比 macOS（Finder 支持通过 AppleScript 直接操作标签页）会明显较慢。
 
-> **⚠️ 注意：** 标签页打开过程中请勿操作键盘或鼠标。标签页打开使用 OS 级别的按键模拟，操作期间的任何输入可能干扰自动化流程，导致意外行为（例如打开错误的文件夹、出现无关窗口等）。
+> **⚠️ 注意（ctypes SendInput 回退）：** 标签页打开过程中请勿操作键盘或鼠标。ctypes 回退方式使用 OS 级别的按键模拟（`SendInput`），操作期间的任何输入可能干扰自动化流程。pywinauto UIA 方式主要使用目标指定的 UI Automation 和 PostMessage（无全局按键），但在 UIA 操作失败时可能回退到键盘快捷键。
 
 ## 配置文件
 

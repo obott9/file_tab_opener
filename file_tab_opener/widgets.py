@@ -330,22 +330,21 @@ class TabView:
 
         CTkButton is a composite widget (Canvas + internal Label) that
         cannot be reliably measured via winfo_reqwidth() on a temporary
-        instance. Instead, measure the text width using tkinter.font and
-        add padding for the button chrome.
+        instance. Instead, measure the text width using CTkFont (the
+        same font CTkButton uses) and add padding for button chrome.
 
         ttk.Button can be measured directly via a temporary widget.
         """
         if CTK_AVAILABLE:
-            # Measure text width via tkinter.font (CTkButton default: 13px)
-            import tkinter.font as tkfont
+            # Use CTkFont to match the actual CTkButton font
             try:
-                font = tkfont.Font(family="", size=13)
+                font = ctk.CTkFont()
                 text_w = font.measure(name)
             except Exception:
                 # Fallback: CJK-aware character width estimation
                 text_w = _text_display_width(name) * 9
-            # CTkButton padding: ~24px (border + internal padding)
-            return max(text_w + 24, 50)
+            # CTkButton chrome: 2 * corner_radius(6) + margin ≈ 14px
+            return max(text_w + 14, 50)
         else:
             tmp = ttk.Button(self._inner, text=name)
             tmp.update_idletasks()

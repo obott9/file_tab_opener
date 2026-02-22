@@ -171,7 +171,7 @@ class MainWindow:
         timeout = self._get_timeout()
 
         # Show wait cursor while tabs are being opened
-        self.root.config(cursor="wait")
+        self._set_cursor("wait")
 
         def safe_after(callback: Any) -> None:
             """Schedule callback on main thread, ignoring TclError if window closed."""
@@ -207,11 +207,23 @@ class MainWindow:
 
         threading.Thread(target=do_open, daemon=True).start()
 
+    def _set_cursor(self, cursor: str) -> None:
+        """Set cursor on root and all descendant widgets recursively."""
+        def _apply(widget: Any) -> None:
+            try:
+                widget.config(cursor=cursor)
+            except (tk.TclError, AttributeError):
+                pass
+            for child in widget.winfo_children():
+                _apply(child)
+
+        _apply(self.root)
+
     def _reset_tab_opening_flag(self) -> None:
         """Reset the tab group section's opening flag and cursor from the main thread."""
         if hasattr(self, "tab_group_section"):
             self.tab_group_section._opening = False
-        self.root.config(cursor="")
+        self._set_cursor("")
 
     def _on_close(self) -> None:
         """Save window geometry and close."""

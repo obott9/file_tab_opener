@@ -10,7 +10,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/).
 - `TabGroupSection.reset_opening()` public method replaces direct `_opening` attribute access from `MainWindow` (P1: encapsulation)
 - `open_single_folder` and `_open_separate` in `opener_mac.py` now use `subprocess.run` instead of fire-and-forget `Popen` (P2: resource cleanup)
 - Dropdown height in `history.py` now measured via `winfo_reqheight()` instead of hardcoded `20px` per row (P3: HiDPI support)
-- `TabView._estimate_btn_width()` now measures CTkButton width by creating a temporary button, matching ttk behavior (P4: accurate CJK width)
+- `TabView._estimate_btn_width()` now uses `tkinter.font.Font.measure()` for CTkButton width (P4: accurate CJK width, avoids TclError on composite widget)
 - Settings default values extracted to `DEFAULT_SETTINGS` constant in `config.py` (P5: maintainability)
 - `_STRINGS` dictionary keys in `i18n.py` now use `LANG_*` constants instead of string literals (P7: typo prevention)
 

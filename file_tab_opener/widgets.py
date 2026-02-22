@@ -326,17 +326,26 @@ class TabView:
         self._frame.after_idle(self._relayout)
 
     def _estimate_btn_width(self, name: str) -> int:
-        """Measure the pixel width a button needs for the given text.
+        """Estimate the pixel width a button needs for the given text.
 
-        Creates a temporary button, measures its requested width, then
-        destroys it. Works with both CTkButton and ttk.Button.
+        CTkButton is a composite widget (Canvas + internal Label) that
+        cannot be reliably measured via winfo_reqwidth() on a temporary
+        instance. Instead, measure the text width using tkinter.font and
+        add padding for the button chrome.
+
+        ttk.Button can be measured directly via a temporary widget.
         """
         if CTK_AVAILABLE:
-            tmp = ctk.CTkButton(self._inner, text=name, width=0)
-            tmp.update_idletasks()
-            w = tmp.winfo_reqwidth()
-            tmp.destroy()
-            return max(w, 50)
+            # Measure text width via tkinter.font (CTkButton default: 13px)
+            import tkinter.font as tkfont
+            try:
+                font = tkfont.Font(family="", size=13)
+                text_w = font.measure(name)
+            except Exception:
+                # Fallback: CJK-aware character width estimation
+                text_w = _text_display_width(name) * 9
+            # CTkButton padding: ~24px (border + internal padding)
+            return max(text_w + 24, 50)
         else:
             tmp = ttk.Button(self._inner, text=name)
             tmp.update_idletasks()

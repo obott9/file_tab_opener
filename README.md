@@ -91,7 +91,19 @@ Two-tier fallback:
 
 Windows Explorer does not provide a public API for tab operations. All methods rely on UI Automation or keystroke simulation (`Ctrl+T` → address bar input), which requires `delay` waits between each tab for the UI to respond. We have minimized delays as much as possible — using UIA ValuePattern for direct address bar input, fine-tuning wait times, and skipping unnecessary steps — but the fundamental limitation of having no native tab API means that opening many tabs will be noticeably slower than on macOS, where Finder supports direct tab manipulation via AppleScript.
 
-> **⚠️ Important:** Do not use the keyboard or mouse while tabs are being opened. The tab opening process uses OS-level keystroke simulation, so any input during the operation may interfere with the automation and cause unexpected behavior (e.g., wrong folders opening, unrelated windows appearing).
+> **⚠️ Important (ctypes SendInput fallback):** Do not use the keyboard or mouse while tabs are being opened. The ctypes fallback method uses OS-level keystroke simulation (`SendInput`), so any input during the operation may interfere with the automation. The pywinauto UIA method uses targeted UI Automation (no global keystrokes) and is not affected by user input.
+
+### Network Paths (Windows)
+
+UNC paths (`\\server\share`) are supported. Since network shares may require authentication that only Explorer can trigger, UNC paths skip the usual `is_dir()` validation and are passed directly to Explorer.
+
+When a UNC path requires authentication:
+1. Explorer shows a Windows Security credential dialog
+2. The app completes its tab-opening process without waiting for authentication
+3. The tab initially shows "This PC" as a placeholder
+4. After the user authenticates, Explorer navigates to the actual network share
+
+If the user cancels the authentication dialog, the tab remains on "This PC".
 
 ## Configuration
 

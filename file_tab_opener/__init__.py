@@ -10,7 +10,7 @@ try:
 
     __version__ = version("file-tab-opener")
 except Exception:
-    __version__ = "1.0.0"
+    __version__ = "1.1.0"
 
 
 def validate_paths(paths: list[str]) -> tuple[list[str], list[str]]:

@@ -340,6 +340,8 @@ def _open_tabs_pywinauto_uia(
         on_progress(1, len(paths), paths[0])
 
     if len(paths) == 1:
+        if window_rect:
+            _apply_window_rect(new_hwnd, window_rect)
         return True
 
     # Connect to the Explorer window via UIA
@@ -459,6 +461,9 @@ def _open_tabs_ctypes(
         on_progress(1, len(paths), paths[0])
 
     if len(paths) == 1:
+        hwnd = _find_new_explorer_hwnd(before_hwnds, timeout=min(timeout, _WINDOW_FIND_TIMEOUT))
+        if hwnd and window_rect:
+            _apply_window_rect(hwnd, window_rect)
         return True
 
     # Bring the new Explorer window to the foreground

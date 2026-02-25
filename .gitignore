@@ -20,8 +20,8 @@ build/
 *.swp
 *.swo
 
-# Assets (icon source PNGs)
-assets/
+# Assets (source PNGs are in dev_notes, not here)
+assets/*.png
 
 # OS
 .DS_Store

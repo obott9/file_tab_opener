@@ -7,6 +7,7 @@ Composes HistorySection and TabGroupSection into the application window.
 from __future__ import annotations
 
 import logging
+import os
 import threading
 import tkinter as tk
 import tkinter.ttk as ttk
@@ -187,7 +188,7 @@ class MainWindow:
 
         # Show wait cursor and toast while tabs are being opened
         self._set_cursor("wait")
-        self._show_toast()
+        self._show_toast(len(valid))
 
         def safe_after(callback: Any) -> None:
             """Schedule callback on main thread, ignoring TclError if window closed."""
@@ -200,6 +201,9 @@ class MainWindow:
             try:
                 self.opener.open_folders_as_tabs(
                     valid,
+                    on_progress=lambda cur, tot, p: safe_after(
+                        lambda c=cur, tt=tot, pp=p: self._update_toast(c, tt, pp),
+                    ),
                     on_error=lambda p, e: safe_after(
                         lambda: messagebox.showerror(
                             t("error.title"),
@@ -236,7 +240,7 @@ class MainWindow:
 
         _apply(self.root)
 
-    def _show_toast(self) -> None:
+    def _show_toast(self, total: int) -> None:
         """Show a toast notification centered on the app window.
 
         Uses place() with relative coordinates to avoid multi-monitor /
@@ -262,18 +266,57 @@ class MainWindow:
             relwidth=0.5, relheight=0.5,
         )
 
-        tk.Label(
+        text = self._build_toast_text(0, total, "")
+        label = tk.Label(
             toast,
-            text=t("toast.opening_tabs"),
+            text=text,
             bg=bg, fg=fg,
             font=("", 13),
             justify="center",
-        ).place(relx=0.5, rely=0.5, anchor="center")
+        )
+        label.place(relx=0.5, rely=0.5, anchor="center")
 
         toast.lift()
         self._toast = toast
+        self._toast_label = label
+        self._toast_bg = bg
+        self._toast_fg = fg
         self.root.update_idletasks()
-        log.debug("Toast shown (place overlay on root)")
+        log.debug("Toast shown (total=%d)", total)
+
+    def _update_toast(self, current: int, total: int, path: str) -> None:
+        """Update toast text with progress info."""
+        label = getattr(self, "_toast_label", None)
+        if label is None:
+            return
+        try:
+            text = self._build_toast_text(current, total, path)
+            label.config(text=text)
+            self.root.update_idletasks()
+        except tk.TclError:
+            pass
+        log.debug("Toast progress %d/%d: %s", current, total, path)
+
+    @staticmethod
+    def _compact_path(path: str, max_chars: int = 45) -> str:
+        """Compact a path using Windows-style ellipsis (C:\\...\\folder)."""
+        if not path or len(path) <= max_chars:
+            return path
+        drive, rest = os.path.splitdrive(path)
+        if not rest:
+            return path[:max_chars - 3] + "..."
+        # Keep drive + "\\..." + last portion
+        suffix_len = max_chars - len(drive) - 5  # 5 for "\\..."
+        if suffix_len < 5:
+            return path[:max_chars - 3] + "..."
+        return drive + "\\..." + rest[-suffix_len:]
+
+    def _build_toast_text(self, current: int, total: int, path: str) -> str:
+        """Build the 4-line toast text."""
+        header = t("toast.progress_header", current=current, total=total)
+        footer = t("toast.wait_message")
+        path_line = self._compact_path(path) if path else ""
+        return f"{header}\n{path_line}\n{footer}"
 
     def _hide_toast(self) -> None:
         """Dismiss the toast notification if shown."""

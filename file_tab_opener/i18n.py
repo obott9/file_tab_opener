@@ -349,12 +349,19 @@ _STRINGS: Final[dict[str, dict[str, str]]] = {
     },
 
     # --- Toast notification ---
-    "toast.opening_tabs": {
-        LANG_EN: "Opening tabs...\nPlease wait.\nDo not use the keyboard or mouse.",
-        LANG_JA: "タブを展開中...\nしばらくお待ちください。\nキーボード・マウスを操作しないでください",
-        LANG_KO: "탭 열는 중...\n잠시 기다려 주세요.\n키보드와 마우스를 사용하지 마세요.",
-        LANG_ZH_TW: "正在開啟分頁...\n請稍候。\n請勿使用鍵盤或滑鼠。",
-        LANG_ZH_CN: "正在打开标签页...\n请稍候。\n请勿使用键盘或鼠标。",
+    "toast.progress_header": {
+        LANG_EN: "Opening tabs... ({current}/{total})",
+        LANG_JA: "タブを展開中... ({current}/{total})",
+        LANG_KO: "탭 열는 중... ({current}/{total})",
+        LANG_ZH_TW: "正在開啟分頁... ({current}/{total})",
+        LANG_ZH_CN: "正在打开标签页... ({current}/{total})",
+    },
+    "toast.wait_message": {
+        LANG_EN: "Please wait.\nDo not use the keyboard or mouse.",
+        LANG_JA: "しばらくお待ちください。\nキーボード・マウスを操作しないでください",
+        LANG_KO: "잠시 기다려 주세요.\n키보드와 마우스를 사용하지 마세요.",
+        LANG_ZH_TW: "請稍候。\n請勿使用鍵盤或滑鼠。",
+        LANG_ZH_CN: "请稍候。\n请勿使用键盘或鼠标。",
     },
 
     # --- Window geometry ---

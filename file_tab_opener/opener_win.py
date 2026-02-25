@@ -339,6 +339,8 @@ def _open_tabs_pywinauto_uia(
     log.debug("Existing Explorer windows: %d", len(before_hwnds))
 
     # Open the first path
+    if on_progress:
+        on_progress(1, len(paths), paths[0])
     first_path = os.path.normpath(paths[0])
     subprocess.Popen(["explorer.exe", first_path])
     log.debug("Launched explorer.exe: %s", first_path)
@@ -347,9 +349,6 @@ def _open_tabs_pywinauto_uia(
     new_hwnd = _find_new_explorer_hwnd(before_hwnds, timeout=timeout)
     if not new_hwnd:
         raise RuntimeError("New Explorer window not found")
-
-    if on_progress:
-        on_progress(1, len(paths), paths[0])
 
     if len(paths) == 1:
         if window_rect:
@@ -397,6 +396,8 @@ def _open_tabs_pywinauto_uia(
     # Open remaining paths: add tab -> set path -> navigate
     for i, path in enumerate(paths[1:], start=2):
         try:
+            if on_progress:
+                on_progress(i, len(paths), path)
             norm_path = os.path.normpath(path)
             log.debug("Adding tab: [%d/%d] %s", i, len(paths), norm_path)
 
@@ -487,9 +488,6 @@ def _open_tabs_pywinauto_uia(
                     on_error(path, f"Navigation timeout ({timeout:.0f}s)")
                 break
 
-            if on_progress:
-                on_progress(i, len(paths), path)
-
         except Exception as e:
             log.error("Tab addition failed: %s -> %s", path, e)
             if on_error:
@@ -517,11 +515,10 @@ def _open_tabs_ctypes(
     before_hwnds = _enum_explorer_hwnds()
 
     # Open the first path
-    subprocess.Popen(["explorer.exe", os.path.normpath(paths[0])])
-    time.sleep(1.5)
-
     if on_progress:
         on_progress(1, len(paths), paths[0])
+    subprocess.Popen(["explorer.exe", os.path.normpath(paths[0])])
+    time.sleep(1.5)
 
     if len(paths) == 1:
         hwnd = _find_new_explorer_hwnd(before_hwnds, timeout=timeout)
@@ -538,6 +535,8 @@ def _open_tabs_ctypes(
 
     for i, path in enumerate(paths[1:], start=2):
         try:
+            if on_progress:
+                on_progress(i, len(paths), path)
             log.debug("SendInput: [%d/%d] %s", i, len(paths), path)
             # Ctrl+T: new tab
             _send_key_combo(VK_CONTROL, VK_T)
@@ -551,8 +550,6 @@ def _open_tabs_ctypes(
             # Enter
             _press_key(VK_RETURN)
             time.sleep(0.8)
-            if on_progress:
-                on_progress(i, len(paths), path)
         except Exception as e:
             log.error("SendInput failed: %s -> %s", path, e)
             if on_error:
@@ -574,14 +571,14 @@ def _open_tabs_separate(
     """Fallback: open each folder in a separate window."""
     for i, path in enumerate(paths, start=1):
         try:
+            if on_progress:
+                on_progress(i, len(paths), path)
             before_hwnds = _enum_explorer_hwnds() if window_rect else []
             subprocess.Popen(["explorer.exe", os.path.normpath(path)])
             if window_rect:
                 hwnd = _find_new_explorer_hwnd(before_hwnds, timeout=timeout)
                 if hwnd:
                     _apply_window_rect(hwnd, window_rect)
-            if on_progress:
-                on_progress(i, len(paths), path)
             time.sleep(0.3)
         except Exception as e:
             if on_error:

@@ -188,7 +188,7 @@ class MainWindow:
 
         # Show wait cursor and toast while tabs are being opened
         self._set_cursor("wait")
-        self._show_toast(len(valid))
+        self._show_toast(len(valid), valid[0])
 
         def safe_after(callback: Any) -> None:
             """Schedule callback on main thread, ignoring TclError if window closed."""
@@ -240,7 +240,7 @@ class MainWindow:
 
         _apply(self.root)
 
-    def _show_toast(self, total: int) -> None:
+    def _show_toast(self, total: int, first_path: str = "") -> None:
         """Show a toast notification centered on the app window.
 
         Uses place() with relative coordinates to avoid multi-monitor /
@@ -266,7 +266,7 @@ class MainWindow:
             relwidth=0.5, relheight=0.5,
         )
 
-        text = self._build_toast_text(0, total, "")
+        text = self._build_toast_text(1, total, first_path)
         label = tk.Label(
             toast,
             text=text,

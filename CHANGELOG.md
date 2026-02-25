@@ -4,6 +4,21 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [1.1.3] - 2026-02-25
+
+### Added
+- Toast progress display with counter (e.g., "Opening tabs... (1/3)") and current path name
+- Path ellipsis in toast using Windows-style compact path (e.g., `C:\...\folder`)
+
+### Changed
+- Log timestamp format now includes date (`2026-02-25 12:34:56`)
+- Asset files (`.ico`, `.icns`) moved from git-ignored to git-tracked for build automation
+- `.gitignore`: `assets/` → `assets/*.png` (only source PNGs excluded)
+- `.spec` file icon comment updated to reflect git-tracked assets
+
+### Fixed
+- Toast progress timing: counter now updates **before** opening each tab (was updating after)
+
 ## [1.1.2] - 2026-02-23
 
 ### Changed
@@ -108,6 +123,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/).
 - Installable Python package with pyproject.toml (Hatchling build system)
 - 68 tests (40 config + 28 i18n)
 
+[1.1.3]: https://github.com/obott9/file_tab_opener/compare/v1.1.2...v1.1.3
 [1.1.2]: https://github.com/obott9/file_tab_opener/compare/v1.1.1...v1.1.2
 [1.1.1]: https://github.com/obott9/file_tab_opener/compare/v1.1.0...v1.1.1
 [1.1.0]: https://github.com/obott9/file_tab_opener/compare/v1.0.0...v1.1.0

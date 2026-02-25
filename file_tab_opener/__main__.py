@@ -18,7 +18,7 @@ from types import ModuleType
 def _setup_logging() -> None:
     """Configure logging with console and file handlers."""
     log_fmt = "%(asctime)s [%(levelname)s] %(name)s: %(message)s"
-    date_fmt = "%H:%M:%S"
+    date_fmt = "%Y-%m-%d %H:%M:%S"
 
     root_logger = logging.getLogger()
     root_logger.setLevel(logging.DEBUG)

@@ -4,6 +4,11 @@ All notable changes to this project will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/).
 
+## [Unreleased]
+
+### Fixed
+- App icon `.icns` regenerated from correct source (`file_tab_opener00_v5.png`, generic version without platform badge)
+
 ## [1.1.3] - 2026-02-25
 
 ### Added

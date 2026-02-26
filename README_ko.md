@@ -13,7 +13,8 @@
 - **원클릭 열기** — 그룹 내 모든 폴더를 탐색기/Finder의 하나의 창에서 탭으로 열기
 - **기록 & 고정** — 최근 열었던 폴더를 자동 기록, 자주 사용하는 항목은 고정
 - **크로스 플랫폼** — Windows(탐색기 탭, Win 11 이상) 및 macOS(Finder 탭) 지원
-- **듀얼 테마** — [customtkinter](https://github.com/TomSchimansky/CustomTkinter)로 모던한 UI. 미설치 시 표준 tkinter로 폴백. 참고: Windows에서는 일부 표준 tkinter/ttk 컨트롤(스크롤바, 네이티브 대화상자 등)이 다크 테마와 완전히 일치하지 않을 수 있습니다. 이는 Windows ttk 테마 엔진이 다크 모드를 지원하지 않기 때문입니다.
+- **듀얼 테마** — [customtkinter](https://github.com/TomSchimansky/CustomTkinter)로 모던한 UI. 미설치 시 표준 tkinter로 폴백.
+  참고: Windows에서는 일부 표준 tkinter/ttk 컨트롤(스크롤바, 네이티브 대화상자 등)이 다크 테마와 완전히 일치하지 않을 수 있습니다. 이는 Windows ttk 테마 엔진이 다크 모드를 지원하지 않기 때문입니다.
 - **다국어 지원** — 영어, 일본어, 한국어, 번체 중국어, 간체 중국어(시스템 로케일에서 자동 감지)
 
 ## 요구 사항

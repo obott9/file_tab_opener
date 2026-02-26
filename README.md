@@ -13,7 +13,8 @@ Instead of opening folders one by one, register them in a named tab group and op
 - **One-Click Open** — Open all folders in a group as tabs in a single Explorer/Finder window
 - **History with Pin** — Recently opened folders are tracked; pin frequently used ones
 - **Cross-Platform** — Windows (Explorer tabs, Win 11+) and macOS (Finder tabs)
-- **Dual Theme** — Uses [customtkinter](https://github.com/TomSchimansky/CustomTkinter) for a modern look; falls back to standard tkinter if unavailable. Note: On Windows, some standard tkinter/ttk controls (e.g. scrollbars, native dialogs) may not fully match the dark theme because the Windows ttk theme engine does not support dark mode.
+- **Dual Theme** — Uses [customtkinter](https://github.com/TomSchimansky/CustomTkinter) for a modern look; falls back to standard tkinter if unavailable.
+  Note: On Windows, some standard tkinter/ttk controls (e.g. scrollbars, native dialogs) may not fully match the dark theme because the Windows ttk theme engine does not support dark mode.
 - **i18n** — English, Japanese, Korean, Traditional Chinese, Simplified Chinese (auto-detected from system locale)
 
 ## Requirements

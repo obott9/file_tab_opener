@@ -13,7 +13,8 @@
 - **一鍵開啟** — 將群組中的所有資料夾以分頁方式在檔案總管/Finder 的單一視窗中開啟
 - **歷史記錄 & 釘選** — 自動記錄最近開啟的資料夾，常用項目可釘選
 - **跨平台** — 支援 Windows（檔案總管分頁，Win 11 以上）及 macOS（Finder 分頁）
-- **雙主題** — 使用 [customtkinter](https://github.com/TomSchimansky/CustomTkinter) 實現現代化 UI；未安裝時回退至標準 tkinter。注意：在 Windows 上，部分標準 tkinter/ttk 控制項（捲軸、原生對話框等）可能無法完全符合深色主題，這是因為 Windows 的 ttk 主題引擎不支援深色模式。
+- **雙主題** — 使用 [customtkinter](https://github.com/TomSchimansky/CustomTkinter) 實現現代化 UI；未安裝時回退至標準 tkinter。
+  注意：在 Windows 上，部分標準 tkinter/ttk 控制項（捲軸、原生對話框等）可能無法完全符合深色主題，這是因為 Windows 的 ttk 主題引擎不支援深色模式。
 - **多語言** — 英文、日文、韓文、繁體中文、簡體中文（從系統地區設定自動偵測）
 
 ## 系統需求

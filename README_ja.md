@@ -13,7 +13,8 @@
 - **ワンクリックオープン** — グループ内の全フォルダをExplorer/Finderの1ウィンドウにタブで開く
 - **履歴 & ピン留め** — 最近開いたフォルダを自動記録、よく使うものはピン留め
 - **クロスプラットフォーム** — Windows（Explorerタブ、Win 11以降）とmacOS（Finderタブ）対応
-- **デュアルテーマ** — [customtkinter](https://github.com/TomSchimansky/CustomTkinter) でモダンなUI。未インストール時は標準tkinterにフォールバック。※ Windowsでは一部の標準tkinter/ttkコントロール（スクロールバー、ネイティブダイアログ等）がダークテーマに完全対応しません。これはWindowsのttkテーマエンジンがダークモード非対応のためです。
+- **デュアルテーマ** — [customtkinter](https://github.com/TomSchimansky/CustomTkinter) でモダンなUI。未インストール時は標準tkinterにフォールバック。
+  ※ Windowsでは一部の標準tkinter/ttkコントロール（スクロールバー、ネイティブダイアログ等）がダークテーマに完全対応しません。これはWindowsのttkテーマエンジンがダークモード非対応のためです。
 - **多言語対応** — 英語・日本語・韓国語・繁体字中国語・簡体字中国語（システムロケールから自動検出）
 
 ## 動作要件

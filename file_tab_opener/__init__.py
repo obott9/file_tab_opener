@@ -10,7 +10,7 @@ try:
 
     __version__ = version("file-tab-opener")
 except Exception:
-    __version__ = "1.1.3"
+    __version__ = "1.1.4"
 
 
 def is_unc_path(p: str) -> bool:

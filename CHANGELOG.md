@@ -6,6 +6,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/).
 
 ## [Unreleased]
 
+## [1.1.4] - 2026-02-26
+
 ### Fixed
 - App icon `.icns` regenerated from correct source (`file_tab_opener00_v5.png`, generic version without platform badge)
 - Windows dark mode: standard tk/ttk widgets (Canvas, Frame, Combobox) now match dark theme
@@ -133,6 +135,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/).
 - Installable Python package with pyproject.toml (Hatchling build system)
 - 68 tests (40 config + 28 i18n)
 
+[1.1.4]: https://github.com/obott9/file_tab_opener/compare/v1.1.3...v1.1.4
 [1.1.3]: https://github.com/obott9/file_tab_opener/compare/v1.1.2...v1.1.3
 [1.1.2]: https://github.com/obott9/file_tab_opener/compare/v1.1.1...v1.1.2
 [1.1.1]: https://github.com/obott9/file_tab_opener/compare/v1.1.0...v1.1.1

@@ -8,6 +8,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/).
 
 ### Fixed
 - App icon `.icns` regenerated from correct source (`file_tab_opener00_v5.png`, generic version without platform badge)
+- Windows dark mode: standard tk/ttk widgets (Canvas, Frame, Combobox) now match dark theme
+  - TabView canvas/frames use explicit dark background
+  - ttk.Combobox styled with Dark.TCombobox for timeout/language selectors
+  - content_frame, settings_inner, list_frame, entry_frame themed for dark mode
+  - Added `is_dark_mode()` helper to widgets.py
 
 ## [1.1.3] - 2026-02-25
 

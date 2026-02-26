@@ -21,6 +21,7 @@ __all__ = [
     "CTK_AVAILABLE",
     "IS_MAC",
     "IS_WIN",
+    "is_dark_mode",
     "get_root",
     "Frame",
     "Button",
@@ -39,6 +40,19 @@ try:
     CTK_AVAILABLE = True
 except ImportError:
     CTK_AVAILABLE = False
+
+
+_DARK_BG = "#2b2b2b"
+
+
+def is_dark_mode() -> bool:
+    """Check if customtkinter is in dark mode."""
+    if not CTK_AVAILABLE:
+        return False
+    try:
+        return ctk.get_appearance_mode() == "Dark"
+    except Exception:
+        return False
 
 
 # ============================================================
@@ -164,10 +178,15 @@ class TabView:
         self._parent = parent
 
         # Outer frame holds canvas + optional scrollbar
-        self._frame = ttk.Frame(parent)
+        # On Windows, ttk widgets ignore OS dark mode; use tk.Frame with
+        # explicit bg so the tab area matches the rest of the dark UI.
+        self._dark_bg = _DARK_BG if is_dark_mode() else None
+        bg_kw: dict[str, Any] = {"bg": self._dark_bg} if self._dark_bg else {}
+
+        self._frame = tk.Frame(parent, **bg_kw) if self._dark_bg else ttk.Frame(parent)
 
         self._canvas = tk.Canvas(
-            self._frame, highlightthickness=0, borderwidth=0,
+            self._frame, highlightthickness=0, borderwidth=0, **bg_kw,
         )
         self._scrollbar = ttk.Scrollbar(
             self._frame, orient=tk.VERTICAL, command=self._canvas.yview,
@@ -178,7 +197,7 @@ class TabView:
         self._canvas.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
 
         # Inner frame drawn on the canvas
-        self._inner = ttk.Frame(self._canvas)
+        self._inner = tk.Frame(self._canvas, **bg_kw) if self._dark_bg else ttk.Frame(self._canvas)
         self._canvas_window = self._canvas.create_window(
             (0, 0), window=self._inner, anchor="nw",
         )
@@ -480,7 +499,10 @@ class TabView:
 
         # Create row frames and buttons as direct children of each row
         for row_names in rows:
-            rf = ttk.Frame(self._inner)
+            if self._dark_bg:
+                rf = tk.Frame(self._inner, bg=self._dark_bg)
+            else:
+                rf = ttk.Frame(self._inner)
             rf.pack(fill=tk.X, pady=self._BTN_PAD_Y)
             self._row_frames.append(rf)
 

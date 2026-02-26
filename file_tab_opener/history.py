@@ -22,6 +22,8 @@ from file_tab_opener.i18n import t
 from file_tab_opener.widgets import (
     CTK_AVAILABLE,
     IS_MAC,
+    is_dark_mode,
+    _DARK_BG,
     Frame,
     Button,
     Label,
@@ -62,7 +64,10 @@ class HistorySection:
         Label(self.frame, text=t("history.label")).pack(side=tk.LEFT, padx=(0, 5))
 
         # Entry with custom dropdown (cross-platform scrollable list)
-        entry_frame = ttk.Frame(self.frame)
+        if is_dark_mode():
+            entry_frame = tk.Frame(self.frame, bg=_DARK_BG)
+        else:
+            entry_frame = ttk.Frame(self.frame)
         entry_frame.pack(side=tk.LEFT, fill=tk.X, expand=True, padx=(0, 5))
 
         if CTK_AVAILABLE:

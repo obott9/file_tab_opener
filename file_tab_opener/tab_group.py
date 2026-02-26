@@ -24,6 +24,8 @@ from file_tab_opener.widgets import (
     CTK_AVAILABLE,
     IS_MAC,
     IS_WIN,
+    is_dark_mode,
+    _DARK_BG,
     Frame,
     Button,
     Label,
@@ -135,7 +137,10 @@ class TabGroupSection:
         content.pack(fill=tk.BOTH, expand=True, pady=5)
 
         # Listbox (left side)
-        list_frame = ttk.Frame(content)
+        if is_dark_mode():
+            list_frame = tk.Frame(content, bg=_DARK_BG)
+        else:
+            list_frame = ttk.Frame(content)
         list_frame.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
 
         self.listbox = tk.Listbox(list_frame, selectmode=tk.SINGLE, height=10)

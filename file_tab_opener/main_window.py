@@ -17,7 +17,7 @@ from typing import Any
 from file_tab_opener.config import ConfigManager
 from file_tab_opener import i18n
 from file_tab_opener.i18n import t, SUPPORTED_LANGS, LANG_NAMES
-from file_tab_opener.widgets import CTK_AVAILABLE, Frame, Label, get_root
+from file_tab_opener.widgets import CTK_AVAILABLE, Frame, Label, get_root, is_dark_mode, _DARK_BG
 from file_tab_opener.history import HistorySection
 from file_tab_opener.tab_group import TabGroupSection
 
@@ -62,14 +62,21 @@ class MainWindow:
         if self._content_frame is not None:
             self._content_frame.destroy()
 
-        self._content_frame = ttk.Frame(self.root)
+        dark = is_dark_mode()
+        if dark:
+            self._content_frame = tk.Frame(self.root, bg=_DARK_BG)
+        else:
+            self._content_frame = ttk.Frame(self.root)
         self._content_frame.pack(fill=tk.BOTH, expand=True)
 
         # --- Settings bar (top-right): timeout + language ---
         settings_bar = Frame(self._content_frame)
         settings_bar.pack(fill=tk.X, padx=10, pady=(5, 0))
 
-        settings_inner = ttk.Frame(settings_bar)
+        if dark:
+            settings_inner = tk.Frame(settings_bar, bg=_DARK_BG)
+        else:
+            settings_inner = ttk.Frame(settings_bar)
         settings_inner.pack(side=tk.RIGHT)
 
         # Timeout selector
@@ -101,6 +108,23 @@ class MainWindow:
             self._lang_combo.set(LANG_NAMES[current])
         self._lang_combo.pack(side=tk.LEFT)
         self._lang_combo.bind("<<ComboboxSelected>>", self._on_language_changed)
+
+        # Dark mode styling for ttk.Combobox (Windows doesn't auto-adapt)
+        if dark:
+            style = ttk.Style()
+            style.configure(
+                "Dark.TCombobox",
+                fieldbackground="#333333",
+                foreground="#ffffff",
+                background="#444444",
+            )
+            style.map(
+                "Dark.TCombobox",
+                fieldbackground=[("readonly", "#333333")],
+                foreground=[("readonly", "#ffffff")],
+            )
+            self._timeout_combo.configure(style="Dark.TCombobox")
+            self._lang_combo.configure(style="Dark.TCombobox")
 
         # --- Section 1: History ---
         self.history_section = HistorySection(

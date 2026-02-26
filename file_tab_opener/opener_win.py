@@ -359,139 +359,145 @@ def _open_tabs_pywinauto_uia(
     app = Application(backend="uia").connect(handle=new_hwnd)
     win = app.window(handle=new_hwnd)
 
-    win.set_focus()
-    log.debug("Connected via UIA: hwnd=%s", new_hwnd)
-
-    # --- Discover UIA elements for keystroke-free automation ---
-
-    # "+" (Add tab) button — UIA InvokePattern, no keyboard needed
-    add_tab_btn = None
     try:
-        add_tab_btn = win.child_window(
-            auto_id="AddButton", control_type="Button",
-        )
-        add_tab_btn.wait("exists", timeout=3)
-        log.debug("Found AddButton via UIA")
-    except Exception as e:
-        log.debug("AddButton not found (%s), will use Ctrl+T fallback", e)
+        win.set_focus()
+        log.debug("Connected via UIA: hwnd=%s", new_hwnd)
 
-    # XAML island host — target for PostMessage Enter
-    xaml_hwnd = None
-    try:
-        xaml_host = win.child_window(class_name="InputSiteWindowClass")
-        xaml_hwnd = xaml_host.handle
-        log.debug("Found InputSiteWindowClass: hwnd=%s", xaml_hwnd)
-    except Exception as e:
-        log.debug("InputSiteWindowClass not found (%s), will use keyboard Enter", e)
+        # --- Discover UIA elements for keystroke-free automation ---
 
-    # Address bar Edit control
-    addr_edit = win.child_window(
-        auto_id="PART_AutoSuggestBox",
-        control_type="Group",
-    ).child_window(
-        auto_id="TextBox",
-        control_type="Edit",
-    )
-
-    # Open remaining paths: add tab -> set path -> navigate
-    for i, path in enumerate(paths[1:], start=2):
+        # "+" (Add tab) button — UIA InvokePattern, no keyboard needed
+        add_tab_btn = None
         try:
-            if on_progress:
-                on_progress(i, len(paths), path)
-            norm_path = os.path.normpath(path)
-            log.debug("Adding tab: [%d/%d] %s", i, len(paths), norm_path)
+            add_tab_btn = win.child_window(
+                auto_id="AddButton", control_type="Button",
+            )
+            add_tab_btn.wait("exists", timeout=3)
+            log.debug("Found AddButton via UIA")
+        except Exception as e:
+            log.debug("AddButton not found (%s), will use Ctrl+T fallback", e)
 
-            # --- New tab (UIA Invoke → Ctrl+T fallback) ---
-            if add_tab_btn:
-                try:
-                    add_tab_btn.invoke()
-                    log.debug("New tab via UIA Invoke")
-                except Exception as e:
-                    log.debug("UIA Invoke failed (%s), Ctrl+T fallback", e)
+        # XAML island host — target for PostMessage Enter
+        xaml_hwnd = None
+        try:
+            xaml_host = win.child_window(class_name="InputSiteWindowClass")
+            xaml_hwnd = xaml_host.handle
+            log.debug("Found InputSiteWindowClass: hwnd=%s", xaml_hwnd)
+        except Exception as e:
+            log.debug("InputSiteWindowClass not found (%s), will use keyboard Enter", e)
+
+        # Address bar Edit control
+        addr_edit = win.child_window(
+            auto_id="PART_AutoSuggestBox",
+            control_type="Group",
+        ).child_window(
+            auto_id="TextBox",
+            control_type="Edit",
+        )
+
+        # Open remaining paths: add tab -> set path -> navigate
+        for i, path in enumerate(paths[1:], start=2):
+            try:
+                if on_progress:
+                    on_progress(i, len(paths), path)
+                norm_path = os.path.normpath(path)
+                log.debug("Adding tab: [%d/%d] %s", i, len(paths), norm_path)
+
+                # --- New tab (UIA Invoke → Ctrl+T fallback) ---
+                if add_tab_btn:
+                    try:
+                        add_tab_btn.invoke()
+                        log.debug("New tab via UIA Invoke")
+                    except Exception as e:
+                        log.debug("UIA Invoke failed (%s), Ctrl+T fallback", e)
+                        pwa_keyboard.send_keys("^t")
+                else:
                     pwa_keyboard.send_keys("^t")
-            else:
-                pwa_keyboard.send_keys("^t")
-            time.sleep(0.8)
+                time.sleep(0.8)
 
-            # --- Focus address bar + set path (with retry) ---
-            path_set = False
-            for attempt in range(3):
-                # Focus (UIA set_focus → Ctrl+L fallback)
-                try:
-                    addr_edit.set_focus()
-                    log.debug("Address bar focused via UIA (attempt %d)", attempt + 1)
-                except Exception as e:
-                    log.debug("UIA set_focus failed (%s), Ctrl+L fallback", e)
-                    pwa_keyboard.send_keys("^l")
+                # --- Focus address bar + set path (with retry) ---
+                path_set = False
+                for attempt in range(3):
+                    # Focus (UIA set_focus → Ctrl+L fallback)
+                    try:
+                        addr_edit.set_focus()
+                        log.debug("Address bar focused via UIA (attempt %d)", attempt + 1)
+                    except Exception as e:
+                        log.debug("UIA set_focus failed (%s), Ctrl+L fallback", e)
+                        pwa_keyboard.send_keys("^l")
 
-                # Wait for the address bar Edit to be ready
-                try:
-                    addr_edit.wait("ready", timeout=3)
-                    log.debug("Address bar Edit ready (attempt %d)", attempt + 1)
-                except Exception:
-                    log.debug("Address bar wait failed (attempt %d), waiting 0.5s", attempt + 1)
-                    time.sleep(0.5)
+                    # Wait for the address bar Edit to be ready
+                    try:
+                        addr_edit.wait("ready", timeout=3)
+                        log.debug("Address bar Edit ready (attempt %d)", attempt + 1)
+                    except Exception:
+                        log.debug("Address bar wait failed (attempt %d), waiting 0.5s", attempt + 1)
+                        time.sleep(0.5)
 
-                # Set path via UIA ValuePattern
-                try:
-                    addr_edit.set_edit_text(norm_path)
-                    log.debug("Path set via UIA ValuePattern (attempt %d)", attempt + 1)
-                except Exception as uia_e:
-                    # Fallback to keyboard input if UIA fails
-                    log.debug("UIA input failed (%s), falling back to keyboard", uia_e)
-                    pwa_keyboard.send_keys(
-                        norm_path, with_spaces=True, pause=0.01
-                    )
+                    # Set path via UIA ValuePattern
+                    try:
+                        addr_edit.set_edit_text(norm_path)
+                        log.debug("Path set via UIA ValuePattern (attempt %d)", attempt + 1)
+                    except Exception as uia_e:
+                        # Fallback to keyboard input if UIA fails
+                        log.debug("UIA input failed (%s), falling back to keyboard", uia_e)
+                        pwa_keyboard.send_keys(
+                            norm_path, with_spaces=True, pause=0.01
+                        )
 
-                time.sleep(0.15)
+                    time.sleep(0.15)
 
-                # Verify the address bar contains the expected path
-                try:
-                    current_text = addr_edit.get_value()
-                    if current_text and os.path.normpath(current_text) == norm_path:
-                        log.debug("Path verified OK: %s", current_text)
+                    # Verify the address bar contains the expected path
+                    try:
+                        current_text = addr_edit.get_value()
+                        if current_text and os.path.normpath(current_text) == norm_path:
+                            log.debug("Path verified OK: %s", current_text)
+                            path_set = True
+                            break
+                        else:
+                            log.warning(
+                                "Path mismatch (attempt %d): expected=%s, got=%s",
+                                attempt + 1, norm_path, current_text,
+                            )
+                    except Exception as ve:
+                        log.debug("Could not verify path (attempt %d): %s", attempt + 1, ve)
+                        # If verification fails, assume it's set and proceed
                         path_set = True
                         break
-                    else:
-                        log.warning(
-                            "Path mismatch (attempt %d): expected=%s, got=%s",
-                            attempt + 1, norm_path, current_text,
-                        )
-                except Exception as ve:
-                    log.debug("Could not verify path (attempt %d): %s", attempt + 1, ve)
-                    # If verification fails, assume it's set and proceed
-                    path_set = True
+
+                    time.sleep(0.3)
+
+                if not path_set:
+                    log.warning("Path set failed after retries, proceeding anyway: %s", norm_path)
+
+                time.sleep(0.1)
+
+                # --- Navigate: Enter (PostMessage → keyboard fallback) ---
+                if xaml_hwnd:
+                    try:
+                        _post_enter_key(xaml_hwnd)
+                        log.debug("Enter via PostMessage to hwnd=%s", xaml_hwnd)
+                    except Exception as e:
+                        log.debug("PostMessage failed (%s), keyboard Enter fallback", e)
+                        pwa_keyboard.send_keys("{ENTER}")
+                else:
+                    pwa_keyboard.send_keys("{ENTER}")
+
+                # Wait for navigation to complete
+                if not _wait_for_navigation(addr_edit, timeout=timeout):
+                    log.error("Navigation timeout: %s (%.0fs)", path, timeout)
+                    if on_error:
+                        on_error(path, f"Navigation timeout ({timeout:.0f}s)")
                     break
 
-                time.sleep(0.3)
-
-            if not path_set:
-                log.warning("Path set failed after retries, proceeding anyway: %s", norm_path)
-
-            time.sleep(0.1)
-
-            # --- Navigate: Enter (PostMessage → keyboard fallback) ---
-            if xaml_hwnd:
-                try:
-                    _post_enter_key(xaml_hwnd)
-                    log.debug("Enter via PostMessage to hwnd=%s", xaml_hwnd)
-                except Exception as e:
-                    log.debug("PostMessage failed (%s), keyboard Enter fallback", e)
-                    pwa_keyboard.send_keys("{ENTER}")
-            else:
-                pwa_keyboard.send_keys("{ENTER}")
-
-            # Wait for navigation to complete
-            if not _wait_for_navigation(addr_edit, timeout=timeout):
-                log.error("Navigation timeout: %s (%.0fs)", path, timeout)
+            except Exception as e:
+                log.error("Tab addition failed: %s -> %s", path, e)
                 if on_error:
-                    on_error(path, f"Navigation timeout ({timeout:.0f}s)")
-                break
+                    on_error(path, str(e))
 
-        except Exception as e:
-            log.error("Tab addition failed: %s -> %s", path, e)
-            if on_error:
-                on_error(path, str(e))
+    finally:
+        # Ensure COM references held by pywinauto are released
+        del addr_edit, win, app
+        log.debug("UIA COM references released")
 
     # Apply requested window position and bring to foreground
     if window_rect:

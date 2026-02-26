@@ -6,6 +6,15 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/).
 
 ## [Unreleased]
 
+### Added
+- `config_version` field in config JSON (schema versioning for future migration)
+- Path validation in `opener_mac.py` (`validate_paths()` called before opening)
+
+### Changed
+- Config save uses atomic write (tmp → `os.replace()`) with direct write fallback
+- AppleScript escape function now handles backtick, `$`, and `;` characters
+- pywinauto UIA method uses try/finally to ensure COM reference cleanup
+
 ## [1.1.4] - 2026-02-26
 
 ### Fixed

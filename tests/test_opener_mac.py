@@ -153,6 +153,15 @@ class TestEscAppleScript:
     def test_no_special_chars(self) -> None:
         assert _esc_applescript("/Users/test/Documents") == "/Users/test/Documents"
 
+    def test_escape_backtick(self) -> None:
+        assert _esc_applescript("a`b") == "a\\`b"
+
+    def test_escape_dollar(self) -> None:
+        assert _esc_applescript("a$b") == "a\\$b"
+
+    def test_escape_semicolon(self) -> None:
+        assert _esc_applescript("a;b") == "a\\;b"
+
     def test_combined(self) -> None:
         result = _esc_applescript('path\\with"quote\n')
         assert "\n" not in result
@@ -208,16 +217,18 @@ class TestOpenSingleFolder:
 class TestOpenFoldersAsTabs:
     """Test open_folders_as_tabs with mocked subprocess."""
 
+    @patch("file_tab_opener.opener_mac.validate_paths", return_value=(["/a", "/b"], []))
     @patch("file_tab_opener.opener_mac._run_applescript")
-    def test_success(self, mock_run: MagicMock) -> None:
+    def test_success(self, mock_run: MagicMock, _mock_vp: MagicMock) -> None:
         """Should return True when AppleScript succeeds."""
         mock_run.return_value = (True, "")
         result = open_folders_as_tabs(["/a", "/b"])
         assert result is True
 
+    @patch("file_tab_opener.opener_mac.validate_paths", return_value=(["/a", "/b"], []))
     @patch("file_tab_opener.opener_mac._open_separate")
     @patch("file_tab_opener.opener_mac._run_applescript")
-    def test_fallback_on_failure(self, mock_run: MagicMock, mock_separate: MagicMock) -> None:
+    def test_fallback_on_failure(self, mock_run: MagicMock, mock_separate: MagicMock, _mock_vp: MagicMock) -> None:
         """Should fall back to _open_separate on AppleScript failure."""
         mock_run.return_value = (False, "some error")
         mock_separate.return_value = True
@@ -230,8 +241,9 @@ class TestOpenFoldersAsTabs:
         result = open_folders_as_tabs([])
         assert result is False
 
+    @patch("file_tab_opener.opener_mac.validate_paths", return_value=(["/a", "/b"], []))
     @patch("file_tab_opener.opener_mac._run_applescript")
-    def test_deduplicates_paths(self, mock_run: MagicMock) -> None:
+    def test_deduplicates_paths(self, mock_run: MagicMock, _mock_vp: MagicMock) -> None:
         """Should deduplicate paths before opening."""
         mock_run.return_value = (True, "")
         open_folders_as_tabs(["/a", "/b", "/a"])
@@ -241,8 +253,9 @@ class TestOpenFoldersAsTabs:
         # Count occurrences of "/a" in the script
         assert script.count('"/a"') == 1
 
+    @patch("file_tab_opener.opener_mac.validate_paths", return_value=(["/a"], []))
     @patch("file_tab_opener.opener_mac._run_applescript")
-    def test_on_error_callback(self, mock_run: MagicMock) -> None:
+    def test_on_error_callback(self, mock_run: MagicMock, _mock_vp: MagicMock) -> None:
         """Should call on_error when AppleScript fails."""
         mock_run.return_value = (False, "test error")
         errors: list[tuple[str, str]] = []
@@ -254,8 +267,9 @@ class TestOpenFoldersAsTabs:
         assert len(errors) == 1
         assert "test error" in errors[0][1]
 
+    @patch("file_tab_opener.opener_mac.validate_paths", return_value=(["/a"], []))
     @patch("file_tab_opener.opener_mac._run_applescript")
-    def test_accessibility_error(self, mock_run: MagicMock) -> None:
+    def test_accessibility_error(self, mock_run: MagicMock, _mock_vp: MagicMock) -> None:
         """Should show accessibility message on permission errors."""
         mock_run.return_value = (False, "assistive access required")
         errors: list[tuple[str, str]] = []

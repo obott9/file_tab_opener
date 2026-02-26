@@ -105,7 +105,7 @@ class TestLoadSave:
         """Saved JSON should have the expected top-level keys."""
         populated_config.save()
         data = json.loads(populated_config.path.read_text(encoding="utf-8"))
-        assert set(data.keys()) == {"history", "tab_groups", "window_geometry", "settings"}
+        assert set(data.keys()) == {"config_version", "history", "tab_groups", "window_geometry", "settings"}
         assert isinstance(data["history"], list)
         assert isinstance(data["tab_groups"], list)
 

@@ -26,10 +26,17 @@ _ACCESSIBILITY_KEYWORDS = ("assistive", "アクセシビリティ", "辅助功�
 
 
 def _esc_applescript(p: str) -> str:
-    """Escape special characters for AppleScript string literals."""
+    """Escape special characters for AppleScript string literals.
+
+    Handles backslash, double-quote, backtick, dollar sign, semicolon,
+    and strips newline/carriage-return characters.
+    """
     return (
         p.replace("\\", "\\\\")
         .replace('"', '\\"')
+        .replace("`", "\\`")
+        .replace("$", "\\$")
+        .replace(";", "\\;")
         .replace("\n", "")
         .replace("\r", "")
     )
@@ -101,6 +108,18 @@ def open_folders_as_tabs(
         log.debug("  [%d] %s", i, p)
 
     expanded = list(dict.fromkeys(os.path.expanduser(p) for p in paths))
+
+    # Validate paths before opening (skip invalid paths with warning)
+    valid, invalid = validate_paths(expanded)
+    if invalid:
+        log.warning("Skipping invalid paths: %s", invalid)
+        for inv in invalid:
+            if on_error:
+                on_error(inv, "Path not found or not a directory")
+    if not valid:
+        log.warning("No valid paths to open")
+        return False
+    expanded = valid
 
     script = _build_applescript(expanded, window_rect=window_rect)
     log.debug("Running AppleScript (%d lines)", script.count("\n") + 1)

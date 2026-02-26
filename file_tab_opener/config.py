@@ -80,6 +80,7 @@ class TabGroup:
 class AppConfig:
     """Application-wide configuration data."""
 
+    config_version: int = 1
     history: list[HistoryEntry] = field(default_factory=list)
     tab_groups: list[TabGroup] = field(default_factory=list)
     window_geometry: str = "800x600"
@@ -111,16 +112,27 @@ class ConfigManager:
             self.data = AppConfig()
 
     def save(self) -> None:
-        """Write configuration to file. Creates parent directories if needed."""
+        """Write configuration to file atomically (tmp -> rename).
+
+        Creates parent directories if needed.
+        """
         self.path.parent.mkdir(parents=True, exist_ok=True)
         d = self._to_dict()
         text = json.dumps(d, ensure_ascii=False, indent=2)
-        self.path.write_text(text, encoding="utf-8")
+        tmp_path = self.path.with_suffix(".tmp")
+        try:
+            tmp_path.write_text(text, encoding="utf-8")
+            os.replace(tmp_path, self.path)
+        except OSError:
+            # Fallback: direct write if rename fails (e.g. cross-device)
+            log.warning("Atomic rename failed, falling back to direct write")
+            self.path.write_text(text, encoding="utf-8")
         log.debug("Config saved: %s", self.path)
 
     def _to_dict(self) -> dict[str, Any]:
         """Serialize AppConfig to a dictionary."""
         return {
+            "config_version": self.data.config_version,
             "history": [
                 {
                     "path": e.path,
@@ -171,6 +183,7 @@ class ConfigManager:
             ))
 
         return AppConfig(
+            config_version=d.get("config_version", 1),
             history=history,
             tab_groups=tab_groups,
             window_geometry=d.get("window_geometry", "800x600"),

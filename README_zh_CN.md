@@ -13,7 +13,7 @@
 - **一键打开** — 将组中的所有文件夹以标签页方式在资源管理器/Finder 的单个窗口中打开
 - **历史记录 & 固定** — 自动记录最近打开的文件夹，常用项目可固定
 - **跨平台** — 支持 Windows（资源管理器标签页，Win 11 以上）及 macOS（Finder 标签页）
-- **双主题** — 使用 [customtkinter](https://github.com/TomSchimansky/CustomTkinter) 实现现代化 UI；未安装时回退至标准 tkinter
+- **双主题** — 使用 [customtkinter](https://github.com/TomSchimansky/CustomTkinter) 实现现代化 UI；未安装时回退至标准 tkinter。注意：在 Windows 上，部分标准 tkinter/ttk 控件（滚动条、原生对话框等）可能无法完全匹配深色主题，这是因为 Windows 的 ttk 主题引擎不支持深色模式。
 - **多语言** — 英文、日文、韩文、繁体中文、简体中文（从系统区域设置自动检测）
 
 ## 系统要求

@@ -198,6 +198,11 @@ file_tab_opener/
     └── test_opener_win.py   # Windows opener tests
 ```
 
+## Related Projects
+
+- **[FileTabOpenerM](https://github.com/obott9/FileTabOpenerM)** — macOS native version (Swift/SwiftUI). AX API + AppleScript hybrid for reliable Finder tab control, modern sidebar layout.
+- **[FileTabOpenerW](https://github.com/obott9/FileTabOpenerW)** — Windows native version (C++/Win32). Direct UI Automation for Explorer tab control.
+
 ## License
 
 [MIT License](LICENSE) © 2026 obott9

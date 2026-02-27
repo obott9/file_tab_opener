@@ -9,6 +9,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/).
 ### Added
 - `config_version` field in config JSON (schema versioning for future migration)
 - Path validation in `opener_mac.py` (`validate_paths()` called before opening)
+- Related Projects section in README linking to native versions (FileTabOpenerM, FileTabOpenerW)
 
 ### Changed
 - Config save uses atomic write (tmp → `os.replace()`) with direct write fallback
